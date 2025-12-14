@@ -4,6 +4,7 @@
  */
 import { DashboardView } from './views/DashboardView.js';
 import { TaskDetailView } from './views/TaskDetailView.js';
+import { TimesheetView } from './views/TimesheetView.js';
 import { SettingsView } from './views/SettingsView.js';
 
 class App {
@@ -65,6 +66,8 @@ class App {
       } else if (view === 'dashboard') {
         this.currentTaskId = null; // Limpa o ID da tarefa ao voltar ao dashboard
         this.navigateTo('dashboard');
+      } else if (view === 'timesheet' || view === 'monthly-report') {
+        this.navigateTo(view === 'timesheet' ? 'timesheet' : 'monthly-report');
       }
     });
   }
@@ -120,6 +123,7 @@ class App {
       updateWorkLog,
       deleteWorkLog,
       updateSettings,
+      generateTimesheetReport,
       exportData,
       importData
     } = this.dependencies;
@@ -155,6 +159,16 @@ class App {
         if (taskId) {
           await taskDetailView.render(taskId);
         }
+      }
+    } else if (this.currentView === 'timesheet' || this.currentView === 'monthly-report') {
+      const timesheetView = new TimesheetView(
+        generateTimesheetReport,
+        settingsRepository
+      );
+      const content = document.getElementById('monthly-report-content') || document.getElementById('timesheet-content');
+      if (content) {
+        content.classList.add('active');
+        await timesheetView.render();
       }
     } else if (this.currentView === 'settings') {
       const settingsView = new SettingsView(

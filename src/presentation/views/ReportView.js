@@ -14,14 +14,20 @@ class ReportView {
    * Renderiza o relatório em uma nova janela para impressão
    * @param {Object} reportData - Dados do relatório gerados pelo Use Case
    * @param {boolean} isMonthly - Se true, é relatório mensal; se false, é relatório de evento
+   * @param {boolean} isTimesheet - Se true, é timesheet de desenvolvimento
    */
-  render(reportData, isMonthly = false) {
+  render(reportData, isMonthly = false, isTimesheet = false) {
     if (!reportData || !reportData.success || !reportData.data) {
       window.toast?.error('Erro ao gerar relatório: dados inválidos');
       return;
     }
 
     const data = reportData.data;
+    
+    // Detecta automaticamente se é timesheet pela estrutura dos dados
+    if (!isTimesheet && data.entries && Array.isArray(data.entries) && data.entries[0] && data.entries[0].taskTitle) {
+      isTimesheet = true;
+    }
     
     // Cria uma nova janela
     const printWindow = window.open('', '_blank', 'width=800,height=600');
@@ -31,7 +37,7 @@ class ReportView {
     }
 
     // Monta o HTML do relatório
-    printWindow.document.write(this._generateHTML(data, isMonthly));
+    printWindow.document.write(this._generateHTML(data, isMonthly, isTimesheet));
     printWindow.document.close();
 
     // Aguarda o conteúdo carregar antes de mostrar o botão de impressão
@@ -89,6 +95,11 @@ class ReportView {
         minute: '2-digit'
       }).format(date);
     };
+
+    // Se for timesheet, renderiza formato específico
+    if (isTimesheet) {
+      return this._generateTimesheetHTML(data);
+    }
 
     const title = isMonthly 
       ? `Relatório Mensal de Prestação de Contas - ${data.header.period}`
@@ -518,6 +529,312 @@ class ReportView {
       'CANCELLED': 'Cancelado'
     };
     return labels[status] || status;
+  }
+
+  /**
+   * Gera o HTML do timesheet de desenvolvimento
+   * @param {Object} data - Dados do timesheet
+   * @private
+   */
+  _generateTimesheetHTML(data) {
+    const formatCurrency = (value) => Formatters.currency(value);
+
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '';
+      return new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }).format(date);
+    };
+
+    const formatTime = (minutes) => {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return `${hours}h ${mins}min`;
+    };
+
+    const formatHours = (hours) => {
+      return hours.toFixed(1).replace('.', ',') + 'h';
+    };
+
+    return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timesheet de Desenvolvimento - ${this._escapeHtml(data.header.period)}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #000;
+            padding: 8mm;
+            background: white;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 3px solid #000;
+            padding-bottom: 10px;
+        }
+
+        .header h1 {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .header-info {
+            font-size: 9pt;
+            margin-top: 8px;
+        }
+
+        .section {
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            border-bottom: 2px solid #000;
+            padding-bottom: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+            font-size: 9pt;
+        }
+
+        table th {
+            background-color: #333;
+            color: white;
+            border: 1px solid #000;
+            padding: 6px 4px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        table td {
+            border: 1px solid #000;
+            padding: 4px 5px;
+        }
+
+        table td:last-child {
+            text-align: right;
+        }
+
+        .total-row {
+            font-weight: bold;
+            background-color: #f5f5f5;
+        }
+
+        .summary {
+            margin-top: 15px;
+            border: 2px solid #000;
+            padding: 10px;
+            background-color: #fafafa;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .summary-title {
+            font-size: 12pt;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .summary-row:last-child {
+            border-bottom: none;
+        }
+
+        .summary-row.total {
+            font-weight: bold;
+            font-size: 12pt;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 2px solid #000;
+        }
+
+        .print-button {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .btn-print {
+            background-color: #2563EB;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14pt;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .btn-print:hover {
+            background-color: #1d4ed8;
+        }
+
+        @media print {
+            body {
+                padding: 8mm;
+            }
+
+            .print-button {
+                display: none;
+            }
+
+            .section {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            table {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            thead {
+                display: table-header-group;
+            }
+
+            tbody {
+                display: table-row-group;
+            }
+
+            tr {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                page-break-after: auto;
+            }
+
+            .summary {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+        }
+
+        @page {
+            size: A4;
+            margin: 8mm;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Timesheet de Desenvolvimento</h1>
+        <div class="header-info">
+            <strong>Período:</strong> ${this._escapeHtml(data.header.period)}
+        </div>
+        <div class="header-info" style="margin-top: 4px;">
+            Gerado em: ${new Date().toLocaleDateString('pt-BR', { 
+              day: '2-digit', 
+              month: '2-digit', 
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+        </div>
+    </div>
+
+    ${data.entries && data.entries.length > 0 ? `
+    <div class="section">
+        <div class="section-title">Apontamentos de Tempo</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 12%;">Data</th>
+                    <th style="width: 35%;">Tarefa</th>
+                    <th style="width: 20%;">Módulo</th>
+                    <th style="width: 15%;">Duração Real</th>
+                    <th style="width: 15%;">Duração Faturada</th>
+                    <th style="width: 13%;">Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.entries.map(entry => `
+                <tr>
+                    <td>${formatDate(entry.date)}</td>
+                    <td>${this._escapeHtml(entry.taskTitle)}</td>
+                    <td>${this._escapeHtml(entry.project)}</td>
+                    <td>${formatTime(entry.durationMinutes)}</td>
+                    <td>${formatHours(entry.billableHours)}</td>
+                    <td>${formatCurrency(entry.billableAmount)}</td>
+                </tr>
+                `).join('')}
+                <tr class="total-row">
+                    <td colspan="3"><strong>TOTAL</strong></td>
+                    <td><strong>${formatTime(data.totals.totalDurationMinutes)}</strong></td>
+                    <td><strong>${formatHours(data.totals.totalBillableHours)}</strong></td>
+                    <td><strong>${formatCurrency(data.totals.totalBillableAmount)}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    ` : `
+    <div class="section">
+        <p style="text-align: center; padding: 20px; color: #666; font-style: italic;">
+            Nenhum apontamento de tempo encontrado para este período.
+        </p>
+    </div>
+    `}
+
+    <div class="summary">
+        <div class="summary-title">Resumo</div>
+        <div class="summary-row">
+            <span>Total de Apontamentos:</span>
+            <span><strong>${data.totals.entriesCount || 0}</strong></span>
+        </div>
+        <div class="summary-row">
+            <span>Tempo Total Trabalhado:</span>
+            <span><strong>${formatTime(data.totals.totalDurationMinutes)}</strong></span>
+        </div>
+        <div class="summary-row">
+            <span>Tempo Total Faturado:</span>
+            <span><strong>${formatHours(data.totals.totalBillableHours)}</strong></span>
+        </div>
+        <div class="summary-row">
+            <span>Taxa Horária:</span>
+            <span><strong>${formatCurrency(data.settings.hourlyRate)}/hora</strong></span>
+        </div>
+        <div class="summary-row total">
+            <span>VALOR TOTAL FATURADO:</span>
+            <span><strong>${formatCurrency(data.totals.totalBillableAmount)}</strong></span>
+        </div>
+    </div>
+
+    <div class="print-button">
+        <button id="btn-print" class="btn-print">🖨️ Imprimir / Salvar PDF</button>
+    </div>
+</body>
+</html>
+    `;
   }
 
   /**

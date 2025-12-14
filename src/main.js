@@ -34,6 +34,7 @@ import { DeleteTask } from './application/use-cases/DeleteTask.js';
 import { UpdateWorkLog } from './application/use-cases/UpdateWorkLog.js';
 import { DeleteWorkLog } from './application/use-cases/DeleteWorkLog.js';
 import { UpdateSettings } from './application/use-cases/UpdateSettings.js';
+import { GenerateTimesheetReport } from './application/use-cases/GenerateTimesheetReport.js';
 import { ExportData } from './application/use-cases/data/ExportData.js';
 import { ImportData } from './application/use-cases/data/ImportData.js';
 
@@ -82,6 +83,9 @@ const deleteWorkLog = new DeleteWorkLog(workLogRepository, taskRepository);
 // Use Case: Atualizar Configurações
 const updateSettings = new UpdateSettings(settingsRepository);
 
+// Use Case: Gerar Timesheet
+const generateTimesheetReport = new GenerateTimesheetReport(taskRepository, workLogRepository, settingsRepository);
+
 // Use Case: Exportar Dados (Backup)
 const exportData = new ExportData(taskRepository, workLogRepository, settingsRepository);
 
@@ -111,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateWorkLog,
       deleteWorkLog,
       updateSettings,
+      generateTimesheetReport,
       exportData,
       importData
     };

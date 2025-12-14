@@ -13,6 +13,7 @@ export { DeleteTask } from './use-cases/DeleteTask.js';
 export { UpdateWorkLog } from './use-cases/UpdateWorkLog.js';
 export { DeleteWorkLog } from './use-cases/DeleteWorkLog.js';
 export { UpdateSettings } from './use-cases/UpdateSettings.js';
+export { GenerateTimesheetReport } from './use-cases/GenerateTimesheetReport.js';
 
 // Use Cases - Antigos (mantidos para compatibilidade durante migração)
 export { CreateEvent } from './use-cases/CreateEvent.js';
