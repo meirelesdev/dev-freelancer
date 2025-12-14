@@ -4,6 +4,8 @@
  */
 import { Formatters } from '../utils/Formatters.js';
 import { TimeLogModal } from '../components/modals/TimeLogModal.js';
+import { EditTaskModal } from '../components/modals/EditTaskModal.js';
+import { EditWorkLogModal } from '../components/modals/EditWorkLogModal.js';
 
 class TaskDetailView {
   constructor(
@@ -307,11 +309,15 @@ class TaskDetailView {
     ].filter(Boolean);
 
     addTimeLogBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.timeLogModal = new TimeLogModal(this.addWorkLogUseCase, () => {
-          this.render(this.currentTaskId);
-        });
-        this.timeLogModal.show(this.currentTaskId);
+      btn.addEventListener('click', async () => {
+        this.timeLogModal = new TimeLogModal(
+          this.addWorkLogUseCase,
+          this.settingsRepository,
+          () => {
+            this.render(this.currentTaskId);
+          }
+        );
+        await this.timeLogModal.show(this.currentTaskId);
       });
     });
 
@@ -352,31 +358,13 @@ class TaskDetailView {
    * @private
    */
   async _showEditTaskModal(task) {
-    // TODO: Implementar modal de edição
-    const newTitle = window.prompt('Novo título:', task.title);
-    if (!newTitle || newTitle.trim() === '') return;
-
-    const newDescription = window.prompt('Nova descrição:', task.description || '');
-    const newProject = window.prompt('Novo projeto/módulo:', task.project);
-    if (!newProject || newProject.trim() === '') return;
-
-    try {
-      const result = await this.updateTaskUseCase.execute({
-        taskId: task.id,
-        title: newTitle.trim(),
-        description: newDescription?.trim() || '',
-        project: newProject.trim()
-      });
-
-      if (result.success) {
-        window.toast?.success('Tarefa atualizada com sucesso!');
+    this.editTaskModal = new EditTaskModal(
+      this.updateTaskUseCase,
+      async (updatedTask) => {
         await this.render(this.currentTaskId);
-      } else {
-        window.toast?.error(`Erro ao atualizar tarefa: ${result.error}`);
       }
-    } catch (error) {
-      window.toast?.error(`Erro ao atualizar tarefa: ${error.message}`);
-    }
+    );
+    this.editTaskModal.show(task);
   }
 
   /**
@@ -410,8 +398,24 @@ class TaskDetailView {
    * @private
    */
   async _showEditWorkLogModal(workLogId) {
-    // TODO: Implementar modal completo de edição
-    window.toast?.info('Modal de edição de apontamento será implementado em breve');
+    try {
+      const workLog = await this.workLogRepository.findById(workLogId);
+      if (!workLog) {
+        window.toast?.error('Apontamento não encontrado');
+        return;
+      }
+
+      this.editWorkLogModal = new EditWorkLogModal(
+        this.updateWorkLogUseCase,
+        this.settingsRepository,
+        async (updatedWorkLog) => {
+          await this.render(this.currentTaskId);
+        }
+      );
+      await this.editWorkLogModal.show(workLog);
+    } catch (error) {
+      window.toast?.error(`Erro ao carregar apontamento: ${error.message}`);
+    }
   }
 
   /**

@@ -5,8 +5,9 @@
 import { ReportView } from './ReportView.js';
 
 class TimesheetView {
-  constructor(generateTimesheetReportUseCase, settingsRepository = null) {
+  constructor(generateTimesheetReportUseCase, exportTimesheetToCSVUseCase = null, settingsRepository = null) {
     this.generateTimesheetReportUseCase = generateTimesheetReportUseCase;
+    this.exportTimesheetToCSVUseCase = exportTimesheetToCSVUseCase;
     this.settingsRepository = settingsRepository;
     this.currentMonth = new Date().getMonth() + 1; // 1-12
     this.currentYear = new Date().getFullYear();
@@ -85,6 +86,14 @@ class TimesheetView {
           await this.generateTimesheet();
         });
       }
+
+      // Event listener para exportar CSV
+      const exportCsvBtn = document.getElementById('btn-export-csv');
+      if (exportCsvBtn && this.exportTimesheetToCSVUseCase) {
+        exportCsvBtn.addEventListener('click', async () => {
+          await this.exportToCSV();
+        });
+      }
     } catch (error) {
       container.innerHTML = `
         <div class="card" style="border-left-color: var(--color-danger);">
@@ -144,6 +153,67 @@ class TimesheetView {
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent = '📄 Gerar Timesheet';
+      }
+    }
+  }
+
+  async exportToCSV() {
+    try {
+      const month = parseInt(document.getElementById('timesheet-month').value);
+      const year = parseInt(document.getElementById('timesheet-year').value);
+
+      if (!month || month < 1 || month > 12) {
+        window.toast?.error('Mês inválido');
+        return;
+      }
+
+      if (!year || year < 2020 || year > 2100) {
+        window.toast?.error('Ano inválido');
+        return;
+      }
+
+      // Mostra feedback de carregamento
+      const exportBtn = document.getElementById('btn-export-csv');
+      const originalText = exportBtn?.textContent || '📊 Exportar CSV';
+      if (exportBtn) {
+        exportBtn.disabled = true;
+        exportBtn.textContent = '⏳ Exportando...';
+      }
+
+      // Exporta para CSV
+      const result = await this.exportTimesheetToCSVUseCase.execute(month, year);
+
+      if (result.success) {
+        // Cria blob e faz download
+        const blob = new Blob([result.data.csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = result.data.fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        window.toast?.success(`CSV exportado com sucesso! (${result.data.entriesCount} registros)`);
+      } else {
+        window.toast?.error(`Erro ao exportar CSV: ${result.error}`);
+      }
+
+      // Restaura o botão
+      if (exportBtn) {
+        exportBtn.disabled = false;
+        exportBtn.textContent = originalText;
+      }
+    } catch (error) {
+      console.error('Erro ao exportar CSV:', error);
+      window.toast?.error(`Erro ao exportar CSV: ${error.message}`);
+      
+      // Restaura o botão em caso de erro
+      const exportBtn = document.getElementById('btn-export-csv');
+      if (exportBtn) {
+        exportBtn.disabled = false;
+        exportBtn.textContent = '📊 Exportar CSV';
       }
     }
   }

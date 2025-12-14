@@ -126,6 +126,7 @@ class App {
       deleteWorkLog,
       updateSettings,
       generateTimesheetReport,
+      exportTimesheetToCSV,
       exportData,
       importData
     } = this.dependencies;
@@ -165,6 +166,7 @@ class App {
     } else if (this.currentView === 'timesheet' || this.currentView === 'monthly-report') {
       const timesheetView = new TimesheetView(
         generateTimesheetReport,
+        exportTimesheetToCSV,
         settingsRepository
       );
       const content = document.getElementById('monthly-report-content') || document.getElementById('timesheet-content');

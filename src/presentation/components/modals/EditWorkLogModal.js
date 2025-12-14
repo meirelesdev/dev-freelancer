@@ -1,72 +1,70 @@
 /**
- * Modal: Registrar Tempo
- * Permite registrar um apontamento de tempo (início e fim)
+ * Modal: Editar Apontamento de Tempo
+ * Permite editar um apontamento de tempo existente
  */
-class TimeLogModal {
-  constructor(addWorkLogUseCase, settingsRepository = null, onSuccess = null) {
-    this.addWorkLogUseCase = addWorkLogUseCase;
+class EditWorkLogModal {
+  constructor(updateWorkLogUseCase, settingsRepository, onSuccess = null) {
+    this.updateWorkLogUseCase = updateWorkLogUseCase;
     this.settingsRepository = settingsRepository;
     this.onSuccess = onSuccess;
   }
 
   /**
-   * Exibe o modal para registrar tempo
-   * @param {string} taskId - ID da tarefa
+   * Exibe o modal para editar apontamento
+   * @param {WorkLog} workLog - Apontamento a ser editado
    */
-  async show(taskId) {
+  async show(workLog) {
     const existingModal = document.querySelector('.modal-backdrop.active');
     if (existingModal) {
       return;
     }
 
     // Busca configurações para prévia
-    const settings = await this.settingsRepository?.find();
+    const settings = await this.settingsRepository.find();
     const hourlyRate = settings?.hourlyRate || 60.00;
     const minimumBillableMinutes = settings?.minBillableMinutes || 30;
 
-    // Define valores padrão: início agora, fim em 1 hora
-    const now = new Date();
-    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
-    
-    const startTimeStr = this._formatDateTimeLocal(now);
-    const endTimeStr = this._formatDateTimeLocal(oneHourLater);
+    // Formata valores iniciais
+    const startDate = new Date(workLog.startTime);
+    const endDate = new Date(workLog.endTime);
+    const startTimeStr = this._formatDateTimeLocal(startDate);
+    const endTimeStr = this._formatDateTimeLocal(endDate);
 
     const modal = document.createElement('div');
     modal.className = 'modal-backdrop active';
-    modal.setAttribute('data-modal-type', 'time-log');
+    modal.setAttribute('data-modal-type', 'edit-worklog');
     modal.innerHTML = `
       <div class="modal" style="max-width: 500px;">
         <div class="modal-header">
-          <h2>⏱️ Registrar Tempo</h2>
-          <button class="modal-close" id="modal-close-time-log">×</button>
+          <h2>✏️ Editar Apontamento</h2>
+          <button class="modal-close" id="modal-close-edit-worklog">×</button>
         </div>
         <div class="modal-body">
-          <form id="form-time-log">
+          <form id="form-edit-worklog">
             <div class="form-group">
               <label class="form-label">Início *</label>
-              <input type="datetime-local" class="form-input" id="time-log-start" 
+              <input type="datetime-local" class="form-input" id="edit-worklog-start" 
                      value="${startTimeStr}" required>
             </div>
             <div class="form-group">
               <label class="form-label">Fim *</label>
-              <input type="datetime-local" class="form-input" id="time-log-end" 
+              <input type="datetime-local" class="form-input" id="edit-worklog-end" 
                      value="${endTimeStr}" required>
             </div>
             <div class="form-group">
               <label class="form-label">Descrição (opcional)</label>
-              <textarea class="form-input" id="time-log-description" rows="3" 
-                        placeholder="O que foi feito neste período..."></textarea>
+              <textarea class="form-input" id="edit-worklog-description" rows="3">${this._escapeHtml(workLog.description || '')}</textarea>
             </div>
-            <div id="time-log-preview" style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--color-surface); border-radius: var(--radius-md); display: none;">
+            <div id="edit-worklog-preview" style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--color-surface); border-radius: var(--radius-md); display: none;">
               <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-xs);">
                 Prévia:
               </div>
-              <div id="time-log-duration" style="font-weight: var(--font-weight-medium);"></div>
-              <div id="time-log-amount" style="font-size: var(--font-size-lg); color: var(--color-primary); margin-top: var(--spacing-xs);"></div>
+              <div id="edit-worklog-duration" style="font-weight: var(--font-weight-medium);"></div>
+              <div id="edit-worklog-amount" style="font-size: var(--font-size-lg); color: var(--color-primary); margin-top: var(--spacing-xs);"></div>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" id="btn-cancel-time-log">Cancelar</button>
-              <button type="submit" class="btn btn-primary">Registrar Tempo</button>
+              <button type="button" class="btn btn-secondary" id="btn-cancel-edit-worklog">Cancelar</button>
+              <button type="submit" class="btn btn-primary">Salvar Alterações</button>
             </div>
           </form>
         </div>
@@ -77,11 +75,11 @@ class TimeLogModal {
 
     setTimeout(() => {
       document.body.classList.add('modal-open');
-      document.getElementById('time-log-start')?.focus();
+      document.getElementById('edit-worklog-start')?.focus();
     }, 10);
 
     // Event listeners
-    this._setupEventListeners(modal, taskId);
+    this._setupEventListeners(modal, workLog, hourlyRate, minimumBillableMinutes);
     this._setupPreviewUpdates(hourlyRate, minimumBillableMinutes);
   }
 
@@ -89,10 +87,10 @@ class TimeLogModal {
    * Configura os event listeners do modal
    * @private
    */
-  _setupEventListeners(modal, taskId) {
+  _setupEventListeners(modal, workLog, hourlyRate, minimumBillableMinutes) {
     // Fechar modal
-    const closeBtn = document.getElementById('modal-close-time-log');
-    const cancelBtn = document.getElementById('btn-cancel-time-log');
+    const closeBtn = document.getElementById('modal-close-edit-worklog');
+    const cancelBtn = document.getElementById('btn-cancel-edit-worklog');
     const closeModal = () => {
       document.body.classList.remove('modal-open');
       document.documentElement.classList.remove('modal-open');
@@ -112,11 +110,11 @@ class TimeLogModal {
     });
 
     // Submeter formulário
-    const form = document.getElementById('form-time-log');
+    const form = document.getElementById('form-edit-worklog');
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        await this._handleSubmit(modal, taskId);
+        await this._handleSubmit(modal, workLog);
       });
     }
   }
@@ -126,11 +124,11 @@ class TimeLogModal {
    * @private
    */
   _setupPreviewUpdates(hourlyRate, minimumBillableMinutes) {
-    const startInput = document.getElementById('time-log-start');
-    const endInput = document.getElementById('time-log-end');
-    const preview = document.getElementById('time-log-preview');
-    const durationEl = document.getElementById('time-log-duration');
-    const amountEl = document.getElementById('time-log-amount');
+    const startInput = document.getElementById('edit-worklog-start');
+    const endInput = document.getElementById('edit-worklog-end');
+    const preview = document.getElementById('edit-worklog-preview');
+    const durationEl = document.getElementById('edit-worklog-duration');
+    const amountEl = document.getElementById('edit-worklog-amount');
 
     const updatePreview = () => {
       if (!startInput || !endInput || !preview || !durationEl || !amountEl) return;
@@ -148,7 +146,7 @@ class TimeLogModal {
       const hours = Math.floor(durationMinutes / 60);
       const minutes = durationMinutes % 60;
 
-      // Aplica regra de mínimo configurável
+      // Aplica regra de mínimo
       const billableMinutes = Math.max(durationMinutes, minimumBillableMinutes);
       const billableHours = billableMinutes / 60;
       const billableAmount = billableHours * hourlyRate;
@@ -172,10 +170,10 @@ class TimeLogModal {
    * Processa o submit do formulário
    * @private
    */
-  async _handleSubmit(modal, taskId) {
-    const startInput = document.getElementById('time-log-start');
-    const endInput = document.getElementById('time-log-end');
-    const descriptionInput = document.getElementById('time-log-description');
+  async _handleSubmit(modal, workLog) {
+    const startInput = document.getElementById('edit-worklog-start');
+    const endInput = document.getElementById('edit-worklog-end');
+    const descriptionInput = document.getElementById('edit-worklog-description');
 
     if (!startInput || !endInput) {
       window.toast?.error('Erro ao processar formulário');
@@ -196,12 +194,12 @@ class TimeLogModal {
     }
 
     try {
-      if (!this.addWorkLogUseCase) {
-        throw new Error('AddWorkLogUseCase não está disponível');
+      if (!this.updateWorkLogUseCase) {
+        throw new Error('UpdateWorkLogUseCase não está disponível');
       }
 
-      const result = await this.addWorkLogUseCase.execute({
-        taskId,
+      const result = await this.updateWorkLogUseCase.execute({
+        workLogId: workLog.id,
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
         description: descriptionInput?.value?.trim() || ''
@@ -214,16 +212,16 @@ class TimeLogModal {
           document.body.removeChild(modal);
         }
 
-        window.toast?.success('Tempo registrado com sucesso!');
+        window.toast?.success('Apontamento atualizado com sucesso!');
 
         if (this.onSuccess) {
           this.onSuccess(result.data);
         }
       } else {
-        window.toast?.error(`Erro ao registrar tempo: ${result.error || 'Erro desconhecido'}`);
+        window.toast?.error(`Erro ao atualizar apontamento: ${result.error || 'Erro desconhecido'}`);
       }
     } catch (error) {
-      window.toast?.error(`Erro ao registrar tempo: ${error.message}`);
+      window.toast?.error(`Erro ao atualizar apontamento: ${error.message}`);
     }
   }
 
@@ -239,7 +237,18 @@ class TimeLogModal {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
+
+  /**
+   * Escapa HTML para prevenir XSS
+   * @private
+   */
+  _escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
 }
 
 // Export para uso em módulos ES6
-export { TimeLogModal };
+export { EditWorkLogModal };

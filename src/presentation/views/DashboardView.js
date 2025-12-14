@@ -4,6 +4,7 @@
  */
 import { Formatters } from '../utils/Formatters.js';
 import { Task } from '../../domain/entities/Task.js';
+import { ProductivityChart } from '../components/ProductivityChart.js';
 
 class DashboardView {
   constructor(taskRepository, workLogRepository, settingsRepository, createTaskUseCase = null) {
@@ -12,6 +13,11 @@ class DashboardView {
     this.settingsRepository = settingsRepository;
     this.createTaskUseCase = createTaskUseCase;
     this._handleCreateNewTask = null;
+    this.currentFilters = {
+      search: '',
+      project: '',
+      status: ''
+    };
   }
 
   async render() {
@@ -22,10 +28,28 @@ class DashboardView {
 
     try {
       // Busca todas as tarefas
-      const tasks = await this.taskRepository.findAll({
+      let tasks = await this.taskRepository.findAll({
         orderBy: 'createdAt',
         order: 'desc'
       });
+
+      // Aplica filtros
+      if (this.currentFilters.search) {
+        const searchLower = this.currentFilters.search.toLowerCase();
+        tasks = tasks.filter(t => 
+          t.title.toLowerCase().includes(searchLower) ||
+          t.project.toLowerCase().includes(searchLower) ||
+          (t.description && t.description.toLowerCase().includes(searchLower))
+        );
+      }
+
+      if (this.currentFilters.project) {
+        tasks = tasks.filter(t => t.project === this.currentFilters.project);
+      }
+
+      if (this.currentFilters.status) {
+        tasks = tasks.filter(t => t.status === this.currentFilters.status);
+      }
 
       // Busca todas os apontamentos do mês atual
       const now = new Date();
@@ -37,20 +61,27 @@ class DashboardView {
         endDate: lastDayOfMonth.toISOString()
       });
 
-      // Calcula KPIs
+      // Calcula KPIs (usando todas as tarefas, não apenas filtradas)
+      const allTasks = await this.taskRepository.findAll();
       const monthlyBilling = allWorkLogs.reduce((sum, w) => sum + (w.billableAmount || 0), 0);
       const totalWorkedMinutes = allWorkLogs.reduce((sum, w) => sum + (w.durationMinutes || 0), 0);
       const totalWorkedHours = (totalWorkedMinutes / 60).toFixed(1);
-      const pendingTasks = tasks.filter(t => t.status === 'TODO' || t.status === 'DOING').length;
+      const pendingTasks = allTasks.filter(t => t.status === 'TODO' || t.status === 'DOING').length;
 
-      // Calcula valor acumulado por tarefa
+      // Obtém lista única de projetos para filtro
+      const uniqueProjects = [...new Set(allTasks.map(t => t.project).filter(Boolean))].sort();
+
+      // Calcula valor acumulado por tarefa (aplica limite após filtros)
       const tasksWithValue = await Promise.all(
-        tasks.slice(0, 10).map(async (task) => {
+        tasks.slice(0, 50).map(async (task) => {
           const taskWorkLogs = await this.workLogRepository.findByTaskId(task.id);
           const taskValue = taskWorkLogs.reduce((sum, w) => sum + (w.billableAmount || 0), 0);
           return { ...task, accumulatedValue: taskValue };
         })
       );
+
+      // Calcula estatísticas avançadas
+      const stats = this._calculateAdvancedStats(allTasks, allWorkLogs);
 
       // Renderiza
       container.innerHTML = `
@@ -96,9 +127,101 @@ class DashboardView {
           </div>
         </div>
 
+        <!-- Estatísticas Avançadas -->
+        ${stats.hasData ? `
+        <div class="card" style="margin-bottom: var(--spacing-lg);">
+          <h3 style="margin-bottom: var(--spacing-md);">📊 Estatísticas</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--spacing-md); margin-bottom: var(--spacing-md);">
+            <div>
+              <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-xs);">
+                Média Diária
+              </div>
+              <div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); color: var(--color-primary);">
+                ${stats.averageDailyHours.toFixed(1)}h
+              </div>
+            </div>
+            <div>
+              <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-xs);">
+                Total de Tarefas
+              </div>
+              <div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); color: var(--color-text);">
+                ${stats.totalTasks}
+              </div>
+            </div>
+            <div>
+              <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-xs);">
+                Taxa Média/Hora
+              </div>
+              <div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); color: var(--color-success);">
+                ${this.formatCurrency(stats.averageHourlyRate)}
+              </div>
+            </div>
+            <div>
+              <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-xs);">
+                Projetos Ativos
+              </div>
+              <div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); color: var(--color-info);">
+                ${stats.activeProjects}
+              </div>
+            </div>
+          </div>
+          ${allWorkLogs.length > 0 ? `
+            <div style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--color-border);">
+              <h4 style="margin-bottom: var(--spacing-md); font-size: var(--font-size-base);">📈 Produtividade Semanal</h4>
+              ${ProductivityChart.generateWeeklyChart(allWorkLogs)}
+            </div>
+          ` : ''}
+        </div>
+        ` : ''}
+
+        <!-- Filtros e Busca -->
+        <div class="card" style="margin-bottom: var(--spacing-lg);">
+          <div style="display: flex; flex-direction: column; gap: var(--spacing-md);">
+            <!-- Busca - Linha completa -->
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" style="font-size: var(--font-size-sm);">🔍 Buscar</label>
+              <input type="text" class="form-input" id="dashboard-search" 
+                     placeholder="Buscar por título, projeto ou descrição..."
+                     value="${this.currentFilters.search}">
+            </div>
+            
+            <!-- Filtros lado a lado -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label" style="font-size: var(--font-size-sm);">📁 Projeto</label>
+                <select class="form-input" id="dashboard-filter-project" style="width: 100%;">
+                  <option value="">Todos</option>
+                  ${uniqueProjects.map(p => `
+                    <option value="${this.escapeHtml(p)}" ${this.currentFilters.project === p ? 'selected' : ''}>
+                      ${this.escapeHtml(p)}
+                    </option>
+                  `).join('')}
+                </select>
+              </div>
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label" style="font-size: var(--font-size-sm);">📊 Status</label>
+                <select class="form-input" id="dashboard-filter-status" style="width: 100%;">
+                  <option value="">Todos</option>
+                  <option value="TODO" ${this.currentFilters.status === 'TODO' ? 'selected' : ''}>A Fazer</option>
+                  <option value="DOING" ${this.currentFilters.status === 'DOING' ? 'selected' : ''}>Em Andamento</option>
+                  <option value="DONE" ${this.currentFilters.status === 'DONE' ? 'selected' : ''}>Concluída</option>
+                  <option value="BILLED" ${this.currentFilters.status === 'BILLED' ? 'selected' : ''}>Faturada</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          ${(this.currentFilters.search || this.currentFilters.project || this.currentFilters.status) ? `
+            <div style="margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid var(--color-border);">
+              <button class="btn btn-sm btn-secondary" id="dashboard-clear-filters" style="width: 100%;">
+                🗑️ Limpar Filtros
+              </button>
+            </div>
+          ` : ''}
+        </div>
+
         <!-- Lista de Tarefas Recentes -->
-        <div style="margin-bottom: var(--spacing-md);">
-          <h2 style="margin: 0;">Tarefas Recentes</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+          <h2 style="margin: 0;">Tarefas ${tasks.length !== allTasks.length ? `(${tasks.length} de ${allTasks.length})` : `(${tasks.length})`}</h2>
         </div>
         
         ${tasksWithValue.length === 0 ? `
@@ -123,6 +246,9 @@ class DashboardView {
           this.navigateToTask(taskId);
         });
       });
+
+      // Event listeners para filtros
+      this._setupFilterListeners();
 
       // Event listener para criar tarefa (FAB)
       if (this.createTaskUseCase) {
@@ -232,6 +358,86 @@ class DashboardView {
     };
 
     return configs[status] || configs['TODO'];
+  }
+
+  /**
+   * Calcula estatísticas avançadas
+   * @private
+   */
+  _calculateAdvancedStats(allTasks, allWorkLogs) {
+    if (allWorkLogs.length === 0) {
+      return { hasData: false };
+    }
+
+    // Média diária de horas trabalhadas no mês
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const totalHours = allWorkLogs.reduce((sum, w) => sum + (w.durationMinutes || 0), 0) / 60;
+    const averageDailyHours = totalHours / daysInMonth;
+
+    // Taxa média por hora (baseado no faturamento total)
+    const totalBillable = allWorkLogs.reduce((sum, w) => sum + (w.billableAmount || 0), 0);
+    const totalBillableHours = allWorkLogs.reduce((sum, w) => {
+      const minutes = w.durationMinutes || 0;
+      const billableMinutes = Math.max(minutes, 30);
+      return sum + (billableMinutes / 60);
+    }, 0);
+    const averageHourlyRate = totalBillableHours > 0 ? totalBillable / totalBillableHours : 0;
+
+    // Projetos únicos com tarefas
+    const uniqueProjects = new Set(allTasks.map(t => t.project).filter(Boolean));
+
+    return {
+      hasData: true,
+      averageDailyHours,
+      totalTasks: allTasks.length,
+      averageHourlyRate,
+      activeProjects: uniqueProjects.size
+    };
+  }
+
+  /**
+   * Configura event listeners para filtros e busca
+   * @private
+   */
+  _setupFilterListeners() {
+    const searchInput = document.getElementById('dashboard-search');
+    const projectFilter = document.getElementById('dashboard-filter-project');
+    const statusFilter = document.getElementById('dashboard-filter-status');
+    const clearFiltersBtn = document.getElementById('dashboard-clear-filters');
+
+    // Debounce para busca
+    let searchTimeout = null;
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          this.currentFilters.search = e.target.value.trim();
+          this.render();
+        }, 300);
+      });
+    }
+
+    if (projectFilter) {
+      projectFilter.addEventListener('change', (e) => {
+        this.currentFilters.project = e.target.value;
+        this.render();
+      });
+    }
+
+    if (statusFilter) {
+      statusFilter.addEventListener('change', (e) => {
+        this.currentFilters.status = e.target.value;
+        this.render();
+      });
+    }
+
+    if (clearFiltersBtn) {
+      clearFiltersBtn.addEventListener('click', () => {
+        this.currentFilters = { search: '', project: '', status: '' };
+        this.render();
+      });
+    }
   }
 
   navigateToTask(taskId) {

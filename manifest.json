@@ -29,14 +29,21 @@
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
-      "description": "Ver eventos ativos",
+      "description": "Ver tarefas e apontamentos",
       "url": "/control-gi-mendes/",
+      "icons": [{ "src": "/control-gi-mendes/icon-192.png?v=2", "sizes": "192x192" }]
+    },
+    {
+      "name": "Timesheet",
+      "short_name": "Timesheet",
+      "description": "Gerar relatório de horas",
+      "url": "/control-gi-mendes/#timesheet",
       "icons": [{ "src": "/control-gi-mendes/icon-192.png?v=2", "sizes": "192x192" }]
     },
     {
       "name": "Configurações",
       "short_name": "Config",
-      "description": "Configurar taxas",
+      "description": "Configurar taxa horária",
       "url": "/control-gi-mendes/#settings",
       "icons": [{ "src": "/control-gi-mendes/icon-192.png?v=2", "sizes": "192x192" }]
     }

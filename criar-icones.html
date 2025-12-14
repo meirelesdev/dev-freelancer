@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Criar Ícones - Chef Finance</title>
+    <title>Criar Ícones - Dev Freelancer</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2563EB 0%, #1E3A8A 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -31,7 +31,7 @@
         }
 
         h1 {
-            color: #E91E63;
+            color: #2563EB;
             margin-bottom: 10px;
             font-size: 2em;
         }
@@ -60,7 +60,7 @@
         }
 
         canvas {
-            border: 3px solid #E91E63;
+            border: 3px solid #2563EB;
             border-radius: 12px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
@@ -74,7 +74,7 @@
         }
 
         button {
-            background: #E91E63;
+            background: #2563EB;
             color: white;
             border: none;
             padding: 15px 30px;
@@ -83,13 +83,13 @@
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(233, 30, 99, 0.3);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
         }
 
         button:hover {
-            background: #C2185B;
+            background: #1E40AF;
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(233, 30, 99, 0.4);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
         }
 
         button:active {
@@ -107,13 +107,13 @@
         }
 
         .info strong {
-            color: #E91E63;
+            color: #2563EB;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>👨‍🍳 Chef Finance</h1>
+        <h1>💻 Dev Freelancer</h1>
         <p class="subtitle">Gerador de Ícones PWA</p>
 
         <div class="preview-container">
@@ -143,14 +143,14 @@
     </div>
 
     <script>
-        // Cores do tema Chef Finance
+        // Cores do tema Dev Freelancer
         const colors = {
-            primary: '#E91E63',
-            secondary: '#F4F7F6',
-            accent: '#FF6B9D',
-            dark: '#C2185B',
+            primary: '#2563EB',      // Azul principal
+            secondary: '#1E40AF',    // Azul escuro
+            accent: '#3B82F6',       // Azul claro
+            dark: '#1E3A8A',         // Azul muito escuro
             white: '#FFFFFF',
-            gold: '#FFD700'
+            code: '#10B981'          // Verde para símbolo de código
         };
 
         function createIcon(canvas, size) {
@@ -178,22 +178,40 @@
             const centerX = size / 2;
             const centerY = size / 2;
             
-            // Chapéu de chef (parte superior branca)
+            // Símbolo de código: < />
+            ctx.strokeStyle = colors.white;
             ctx.fillStyle = colors.white;
+            ctx.lineWidth = size * 0.06;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            // Desenha "<"
+            const codeSize = size * 0.2;
+            const codeY = centerY;
             ctx.beginPath();
-            ctx.arc(centerX, centerY - size * 0.15, size * 0.25, 0, Math.PI * 2);
+            ctx.moveTo(centerX - codeSize * 0.3, codeY - codeSize * 0.4);
+            ctx.lineTo(centerX - codeSize * 0.6, codeY);
+            ctx.lineTo(centerX - codeSize * 0.3, codeY + codeSize * 0.4);
+            ctx.stroke();
+            
+            // Desenha "/"
+            ctx.beginPath();
+            ctx.moveTo(centerX - codeSize * 0.1, codeY - codeSize * 0.5);
+            ctx.lineTo(centerX + codeSize * 0.1, codeY + codeSize * 0.5);
+            ctx.stroke();
+            
+            // Desenha ">"
+            ctx.beginPath();
+            ctx.moveTo(centerX + codeSize * 0.3, codeY - codeSize * 0.4);
+            ctx.lineTo(centerX + codeSize * 0.6, codeY);
+            ctx.lineTo(centerX + codeSize * 0.3, codeY + codeSize * 0.4);
+            ctx.stroke();
+            
+            // Adiciona ponto decorativo verde (representando código)
+            ctx.fillStyle = colors.code;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY + size * 0.25, size * 0.04, 0, Math.PI * 2);
             ctx.fill();
-            
-            // Faixa do chapéu (rosa)
-            ctx.fillStyle = colors.accent;
-            ctx.fillRect(centerX - size * 0.2, centerY - size * 0.05, size * 0.4, size * 0.08);
-            
-            // Símbolo de cifrão ($) dourado
-            ctx.fillStyle = colors.gold;
-            ctx.font = `bold ${size * 0.35}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('$', centerX, centerY + size * 0.25);
         }
 
         function roundRect(ctx, x, y, width, height, radius) {

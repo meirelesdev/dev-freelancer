@@ -86,8 +86,13 @@ class GenerateTimesheetReport {
         const task = taskMap.get(workLog.taskId);
         if (!task) continue;
 
+        // Extrai a data usando métodos locais para evitar problemas de timezone
         const workLogDate = new Date(workLog.startTime);
-        const dateStr = workLogDate.toISOString().split('T')[0];
+        // Usa métodos locais para garantir que a data seja extraída corretamente
+        const year = workLogDate.getFullYear();
+        const month = String(workLogDate.getMonth() + 1).padStart(2, '0');
+        const day = String(workLogDate.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
 
         // Calcula minutos faturados (aplicando mínimo)
         const minimumBillableMinutes = settings?.minBillableMinutes || 30;

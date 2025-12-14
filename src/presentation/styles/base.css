@@ -13,6 +13,9 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+  height: -webkit-fill-available; /* Para iOS Safari */
+  overflow-x: hidden;
 }
 
 body {
@@ -23,10 +26,12 @@ body {
   color: var(--color-text);
   background-color: var(--color-background);
   min-height: 100vh;
+  min-height: -webkit-fill-available; /* Para iOS Safari */
   overflow-x: hidden;
   /* Previne scroll horizontal e ajusta para mobile */
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Tipografia */

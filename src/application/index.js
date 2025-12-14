@@ -14,4 +14,5 @@ export { UpdateWorkLog } from './use-cases/UpdateWorkLog.js';
 export { DeleteWorkLog } from './use-cases/DeleteWorkLog.js';
 export { UpdateSettings } from './use-cases/UpdateSettings.js';
 export { GenerateTimesheetReport } from './use-cases/GenerateTimesheetReport.js';
+export { ExportTimesheetToCSV } from './use-cases/data/ExportTimesheetToCSV.js';
 

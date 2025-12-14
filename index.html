@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="Dev Freelancer - Gestão de Tarefas e Apontamento de Horas para Desenvolvedores Freelancers">
     <!-- Theme Color - Cor da barra do navegador (Chrome, Edge, etc) -->
     <meta name="theme-color" content="#2563EB" media="(prefers-color-scheme: light)">
@@ -54,14 +54,16 @@
                 <span class="bottom-nav-item-icon">⏱️</span>
                 <span class="bottom-nav-item-label">Timesheet</span>
             </button>
-            <button class="fab" id="fab-new-task" aria-label="Nova Tarefa">
-                ➕
-            </button>
             <button class="bottom-nav-item" data-view="settings" aria-label="Ajustes">
                 <span class="bottom-nav-item-icon">⚙️</span>
                 <span class="bottom-nav-item-label">Ajustes</span>
             </button>
         </nav>
+        
+        <!-- FAB separado da navegação -->
+        <button class="fab" id="fab-new-task" aria-label="Nova Tarefa">
+            ➕
+        </button>
     </div>
 
     <!-- Handler Global de Erros (ANTES de tudo) -->

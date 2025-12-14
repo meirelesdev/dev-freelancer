@@ -1,9 +1,9 @@
 /**
- * Service Worker - Chef Finance
+ * Service Worker - Dev Freelancer
  * Permite funcionamento offline e instalação como PWA
  */
 
-const CACHE_NAME = 'chef-finance-v2'; // Atualizado para forçar refresh dos ícones
+const CACHE_NAME = 'dev-freelancer-v1'; // Cache para Dev Freelancer
 // Base path para GitHub Pages
 const BASE_PATH = '/control-gi-mendes';
 

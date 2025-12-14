@@ -35,6 +35,7 @@ import { UpdateWorkLog } from './application/use-cases/UpdateWorkLog.js';
 import { DeleteWorkLog } from './application/use-cases/DeleteWorkLog.js';
 import { UpdateSettings } from './application/use-cases/UpdateSettings.js';
 import { GenerateTimesheetReport } from './application/use-cases/GenerateTimesheetReport.js';
+import { ExportTimesheetToCSV } from './application/use-cases/data/ExportTimesheetToCSV.js';
 import { ExportData } from './application/use-cases/data/ExportData.js';
 import { ImportData } from './application/use-cases/data/ImportData.js';
 
@@ -86,6 +87,9 @@ const updateSettings = new UpdateSettings(settingsRepository);
 // Use Case: Gerar Timesheet
 const generateTimesheetReport = new GenerateTimesheetReport(taskRepository, workLogRepository, settingsRepository);
 
+// Use Case: Exportar Timesheet para CSV
+const exportTimesheetToCSV = new ExportTimesheetToCSV(generateTimesheetReport);
+
 // Use Case: Exportar Dados (Backup)
 const exportData = new ExportData(taskRepository, workLogRepository, settingsRepository);
 
@@ -116,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteWorkLog,
       updateSettings,
       generateTimesheetReport,
+      exportTimesheetToCSV,
       exportData,
       importData
     };
@@ -125,6 +130,23 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Torna toast disponível globalmente
     window.toast = toast;
+    
+    // Executa testes de validação em desenvolvimento
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      import('./tests/ValidationTests.js').then(({ ValidationTests }) => {
+        ValidationTests.runAll().then(results => {
+          if (results.failed > 0) {
+            console.warn('⚠️ Alguns testes falharam. Verifique os cálculos.');
+          } else {
+            console.log('✅ Todos os testes passaram!');
+          }
+        }).catch(err => {
+          console.warn('⚠️ Não foi possível executar testes:', err);
+        });
+      }).catch(() => {
+        // Arquivo de testes não encontrado - não é crítico
+      });
+    }
     
     // Registrar Service Worker para PWA
     if ('serviceWorker' in navigator) {

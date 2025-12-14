@@ -56,9 +56,10 @@ class ReportView {
    * Gera o HTML do relatório
    * @param {Object} data - Dados do relatório
    * @param {boolean} isMonthly - Se true, é relatório mensal
+   * @param {boolean} isTimesheet - Se true, é timesheet de desenvolvimento
    * @private
    */
-  _generateHTML(data, isMonthly = false) {
+  _generateHTML(data, isMonthly = false, isTimesheet = false) {
     const formatCurrency = (value) => Formatters.currency(value);
 
     const formatDate = (dateString) => {
@@ -541,13 +542,22 @@ class ReportView {
 
     const formatDate = (dateString) => {
       if (!dateString) return '';
+      
+      // Se já está no formato YYYY-MM-DD, usa diretamente
+      if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-');
+        return `${day}/${month}/${year}`;
+      }
+      
+      // Caso contrário, converte usando métodos locais para evitar problemas de timezone
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return '';
-      return new Intl.DateTimeFormat('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      }).format(date);
+      
+      // Usa métodos locais para garantir que a data seja exibida corretamente
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
     };
 
     const formatTime = (minutes) => {

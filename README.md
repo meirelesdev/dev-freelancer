@@ -99,9 +99,9 @@ src/
 
 Todos os dados são armazenados no `localStorage` do navegador, usando as seguintes chaves:
 
-- `dev_tasks` - Tarefas
-- `dev_worklogs` - Apontamentos de tempo
-- `gi_financas_settings` - Configurações (mantida para compatibilidade)
+- `devtracker_tasks` - Tarefas
+- `devtracker_worklogs` - Apontamentos de tempo
+- `devtracker_settings` - Configurações (taxa horária e tempo mínimo faturável)
 
 ## 🌐 Hospedagem no GitHub Pages
 
@@ -146,12 +146,24 @@ Para uma visão detalhada do projeto, consulte:
 
 ## 📊 Status do Projeto
 
-O projeto está em **migração** para o novo domínio de Gestão de Tarefas de Desenvolvimento:
+O projeto está **100% migrado** para o novo domínio de Gestão de Tarefas de Desenvolvimento:
 
-- ✅ **Domain Layer** - Migrado (Task, WorkLog, Settings)
-- 🔄 **Application Layer** - Em migração (use cases sendo atualizados)
-- ✅ **Infrastructure Layer** - Migrado (repositórios atualizados)
-- 🔄 **Presentation Layer** - Em migração (views sendo atualizadas)
+- ✅ **Domain Layer** - Completo (Task, WorkLog, Settings, FinancialCalculator)
+- ✅ **Application Layer** - Completo (todos os use cases implementados)
+- ✅ **Infrastructure Layer** - Completo (repositórios atualizados com novas chaves)
+- ✅ **Presentation Layer** - Completo (views e modais implementados)
+
+### Funcionalidades Implementadas
+
+- ✅ Criação, edição e exclusão de tarefas
+- ✅ Registro de apontamentos de tempo com cálculo automático
+- ✅ Edição de apontamentos de tempo
+- ✅ Dashboard com KPIs e lista de tarefas
+- ✅ Visualização detalhada de tarefas com resumo financeiro
+- ✅ Geração de timesheet mensal para impressão/PDF
+- ✅ Configurações (taxa horária e tempo mínimo faturável)
+- ✅ Backup e restore de dados
+- ✅ Modais completos para todas as operações
 
 ## 📝 Licença
 
