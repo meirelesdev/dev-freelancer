@@ -4,6 +4,7 @@
  */
 import { Settings } from '../../domain/entities/Settings.js';
 import { DEFAULT_VALUES } from '../../domain/constants/DefaultValues.js';
+import { ConfirmModal } from '../components/modals/ConfirmModal.js';
 
 class SettingsView {
   constructor(settingsRepository, updateSettingsUseCase, exportDataUseCase = null, importDataUseCase = null, taskRepository = null, workLogRepository = null) {
@@ -207,13 +208,24 @@ class SettingsView {
 
       const backupData = await this.exportDataUseCase.execute();
 
-      // Gera nome do arquivo com data
+      // Validação dos dados exportados
+      if (!backupData || typeof backupData !== 'object') {
+        throw new Error('Erro ao gerar backup: dados inválidos');
+      }
+
+      if (!backupData.version) {
+        throw new Error('Erro ao gerar backup: versão não encontrada');
+      }
+
+      // Gera nome do arquivo com data e hora
       const date = new Date();
       const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
-      const filename = `backup_dev_freelancer_${dateStr}.json`;
+      const timeStr = date.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+      const filename = `backup_dev_freelancer_${dateStr}_${timeStr}.json`;
 
       // Cria blob e faz download
-      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const jsonString = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -225,7 +237,8 @@ class SettingsView {
 
       const tasksCount = backupData.tasks ? backupData.tasks.length : 0;
       const workLogsCount = backupData.workLogs ? backupData.workLogs.length : 0;
-      window.toast.success(`Backup exportado com sucesso! (${tasksCount} tarefas, ${workLogsCount} apontamentos)`);
+      const settingsInfo = backupData.settings ? 'com configurações' : 'sem configurações';
+      window.toast.success(`Backup exportado com sucesso! (${tasksCount} tarefas, ${workLogsCount} apontamentos, ${settingsInfo})`);
       
       btn.disabled = false;
       btn.textContent = originalText;
@@ -255,23 +268,48 @@ class SettingsView {
         return;
       }
 
-      // Confirmação
-      const confirmed = window.confirm(
-        '⚠️ ATENÇÃO: Esta ação substituirá TODOS os dados atuais pelos dados do backup.\n\n' +
-        'Certifique-se de que este é o arquivo correto.\n\n' +
-        'Deseja continuar?'
-      );
-
-      if (!confirmed) {
-        event.target.value = ''; // Limpa o input
-        return;
-      }
-
-      // Lê o arquivo
+      // Lê o arquivo primeiro para validar antes de pedir confirmação
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
           const backupData = e.target.result;
+          
+          // Validação básica do arquivo antes de pedir confirmação
+          let parsedData;
+          try {
+            parsedData = typeof backupData === 'string' ? JSON.parse(backupData) : backupData;
+          } catch (parseError) {
+            window.toast.error('Arquivo de backup inválido: formato JSON incorreto');
+            event.target.value = '';
+            return;
+          }
+
+          // Validação da estrutura básica
+          if (!parsedData.version) {
+            window.toast.error('Arquivo de backup inválido: versão não encontrada');
+            event.target.value = '';
+            return;
+          }
+
+          const tasksCount = parsedData.tasks ? parsedData.tasks.length : 0;
+          const workLogsCount = parsedData.workLogs ? parsedData.workLogs.length : 0;
+
+          // Confirmação usando modal (após validar arquivo)
+          const confirmed = await ConfirmModal.show({
+            title: '⚠️ Restaurar Backup',
+            message: `Esta ação substituirá TODOS os dados atuais pelos dados do backup.\n\nArquivo contém:\n• ${tasksCount} tarefas\n• ${workLogsCount} apontamentos\n\nCertifique-se de que este é o arquivo correto.\n\nDeseja continuar?`,
+            confirmText: 'Sim, Restaurar',
+            cancelText: 'Cancelar',
+            type: 'confirm',
+            danger: true
+          });
+
+          if (!confirmed) {
+            event.target.value = ''; // Limpa o input
+            return;
+          }
+
+          // Executa a importação (já validado acima)
           const result = await this.importDataUseCase.execute(backupData);
 
           window.toast.success(
@@ -284,6 +322,7 @@ class SettingsView {
             window.location.reload();
           }, 1500);
         } catch (error) {
+          console.error('Erro ao restaurar backup:', error);
           window.toast.error(`Erro ao restaurar backup: ${error.message}`);
           event.target.value = ''; // Limpa o input em caso de erro
         }
@@ -306,16 +345,17 @@ class SettingsView {
    */
   async resetAll() {
     try {
-      // Primeira confirmação
-      const firstConfirm = window.prompt(
-        '⚠️ ATENÇÃO CRÍTICA ⚠️\n\n' +
-        'Esta ação apagará PERMANENTEMENTE:\n' +
-        '• Todas as tarefas\n' +
-        '• Todos os apontamentos\n' +
-        '• Todas as configurações\n\n' +
-        'Esta ação NÃO PODE SER DESFEITA!\n\n' +
-        'Digite "DELETAR" (em maiúsculas) para confirmar:'
-      );
+      // Primeira confirmação com prompt
+      const firstConfirm = await ConfirmModal.show({
+        title: '⚠️ ATENÇÃO CRÍTICA ⚠️',
+        message: 'Esta ação apagará PERMANENTEMENTE:\n• Todas as tarefas\n• Todos os apontamentos\n• Todas as configurações\n\nEsta ação NÃO PODE SER DESFEITA!\n\nDigite "DELETAR" (em maiúsculas) para confirmar:',
+        confirmText: 'Confirmar',
+        cancelText: 'Cancelar',
+        type: 'prompt',
+        promptPlaceholder: 'Digite DELETAR',
+        promptValue: '',
+        danger: true
+      });
 
       if (firstConfirm !== 'DELETAR') {
         window.toast.info('Operação cancelada');
@@ -323,12 +363,14 @@ class SettingsView {
       }
 
       // Segunda confirmação
-      const secondConfirm = window.confirm(
-        '⚠️ ÚLTIMA CONFIRMAÇÃO ⚠️\n\n' +
-        'Você tem CERTEZA ABSOLUTA que deseja apagar TODOS os dados?\n\n' +
-        'Certifique-se de ter feito um backup antes de continuar.\n\n' +
-        'Esta ação é IRREVERSÍVEL!'
-      );
+      const secondConfirm = await ConfirmModal.show({
+        title: '⚠️ ÚLTIMA CONFIRMAÇÃO ⚠️',
+        message: 'Você tem CERTEZA ABSOLUTA que deseja apagar TODOS os dados?\n\nCertifique-se de ter feito um backup antes de continuar.\n\nEsta ação é IRREVERSÍVEL!',
+        confirmText: 'Sim, Apagar Tudo',
+        cancelText: 'Cancelar',
+        type: 'confirm',
+        danger: true
+      });
 
       if (!secondConfirm) {
         window.toast.info('Operação cancelada');
@@ -340,26 +382,44 @@ class SettingsView {
       btn.disabled = true;
       btn.textContent = '⏳ Apagando...';
 
-      // Apaga todas as tarefas
-      if (this.taskRepository) {
-        const tasks = await this.taskRepository.findAll();
-        for (const task of tasks) {
-          await this.taskRepository.delete(task.id);
+      try {
+        // Limpa todas as tarefas diretamente do localStorage
+        if (this.taskRepository) {
+          const tasks = await this.taskRepository.findAll();
+          for (const task of tasks) {
+            await this.taskRepository.delete(task.id);
+          }
+          // Garante limpeza completa
+          window.localStorage.removeItem('devtracker_tasks');
         }
-      }
 
-      // Apaga todos os apontamentos
-      if (this.workLogRepository) {
-        const workLogs = await this.workLogRepository.findAll();
-        for (const workLog of workLogs) {
-          await this.workLogRepository.delete(workLog.id);
+        // Limpa todos os apontamentos diretamente do localStorage
+        if (this.workLogRepository) {
+          const workLogs = await this.workLogRepository.findAll();
+          for (const workLog of workLogs) {
+            await this.workLogRepository.delete(workLog.id);
+          }
+          // Garante limpeza completa
+          window.localStorage.removeItem('devtracker_worklogs');
         }
-      }
 
-      // Restaura configurações padrão
-      if (this.settingsRepository) {
-        const defaultSettings = Settings.createDefault();
-        await this.settingsRepository.save(defaultSettings);
+        // Restaura configurações padrão
+        if (this.settingsRepository) {
+          const defaultSettings = Settings.createDefault();
+          await this.settingsRepository.save(defaultSettings);
+        }
+
+        // Limpa também chaves antigas que possam existir (compatibilidade)
+        window.localStorage.removeItem('dev_tasks');
+        window.localStorage.removeItem('dev_worklogs');
+        window.localStorage.removeItem('gi_financas_settings');
+        window.localStorage.removeItem('chef_finance_settings');
+      } catch (error) {
+        console.error('Erro ao limpar dados:', error);
+        // Tenta limpar diretamente mesmo em caso de erro
+        window.localStorage.removeItem('devtracker_tasks');
+        window.localStorage.removeItem('devtracker_worklogs');
+        window.localStorage.removeItem('devtracker_settings');
       }
 
       window.toast.success('Todos os dados foram apagados. A página será recarregada...');
@@ -389,16 +449,14 @@ class SettingsView {
       btn.disabled = true;
       btn.textContent = '⏳ Atualizando...';
 
-      // Confirmação
-      const confirmed = window.confirm(
-        '🔄 Atualizar Aplicativo\n\n' +
-        'Esta ação irá:\n' +
-        '• Desregistrar o service worker atual\n' +
-        '• Limpar o cache do navegador\n' +
-        '• Recarregar a página com os arquivos mais recentes\n\n' +
-        '✅ Seus dados serão preservados (tarefas, apontamentos e configurações)\n\n' +
-        'Deseja continuar?'
-      );
+      // Confirmação usando modal
+      const confirmed = await ConfirmModal.show({
+        title: '🔄 Atualizar Aplicativo',
+        message: 'Esta ação irá:\n• Desregistrar o service worker atual\n• Limpar o cache do navegador\n• Recarregar a página com os arquivos mais recentes\n\n✅ Seus dados serão preservados (tarefas, apontamentos e configurações)\n\nDeseja continuar?',
+        confirmText: 'Sim, Atualizar',
+        cancelText: 'Cancelar',
+        type: 'confirm'
+      });
 
       if (!confirmed) {
         btn.disabled = false;

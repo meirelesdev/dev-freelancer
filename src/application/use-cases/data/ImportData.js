@@ -61,16 +61,24 @@ export class ImportData {
       // Limpa dados atuais e restaura backup
       // Importante: Substitui completamente os dados atuais
       
-      // Limpa tarefas
+      // Limpa tarefas (garante limpeza completa)
       const currentTasks = await this.taskRepository.findAll();
       for (const task of currentTasks) {
         await this.taskRepository.delete(task.id);
       }
+      // Remove chave do localStorage para garantir limpeza completa
+      if (window.localStorage.getItem('devtracker_tasks')) {
+        window.localStorage.removeItem('devtracker_tasks');
+      }
 
-      // Limpa apontamentos
+      // Limpa apontamentos (garante limpeza completa)
       const currentWorkLogs = await this.workLogRepository.findAll();
       for (const workLog of currentWorkLogs) {
         await this.workLogRepository.delete(workLog.id);
+      }
+      // Remove chave do localStorage para garantir limpeza completa
+      if (window.localStorage.getItem('devtracker_worklogs')) {
+        window.localStorage.removeItem('devtracker_worklogs');
       }
 
       // Restaura tarefas (suporta formato antigo e novo)
