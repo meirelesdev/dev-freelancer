@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Chef Finance - Gestão Financeira de Eventos Culinários">
+    <!-- Theme Color - Cor da barra do navegador (Chrome, Edge, etc) -->
+    <meta name="theme-color" content="#E91E63" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#E91E63" media="(prefers-color-scheme: dark)">
+    
+    <!-- Apple Mobile Web App -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Chef Finance">
+    
+    <!-- Windows Tile Color -->
+    <meta name="msapplication-TileColor" content="#E91E63">
+    <meta name="msapplication-navbutton-color" content="#E91E63">
+    <title>Chef Finance</title>
+    
+    <!-- Manifest PWA -->
+    <link rel="manifest" href="manifest.json?v=2">
+    
+    <!-- Ícones para iOS -->
+    <link rel="apple-touch-icon" href="icon-192.png?v=2">
+    
+    <!-- Ícone padrão -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=2">
+    
+    <link rel="stylesheet" href="src/presentation/styles/main.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Chef Finance</h1>
+        </header>
+
+        <main class="app-main">
+            <div id="dashboard-content" class="tab-content active"></div>
+            <div id="event-detail-content" class="tab-content"></div>
+            <div id="settings-content" class="tab-content"></div>
+            <div id="monthly-report-content" class="tab-content"></div>
+        </main>
+
+        <!-- Bottom Navigation Bar -->
+        <nav class="bottom-nav">
+            <button class="bottom-nav-item active" data-view="dashboard" aria-label="Início">
+                <span class="bottom-nav-item-icon">🏠</span>
+                <span class="bottom-nav-item-label">Início</span>
+            </button>
+            <button class="fab" id="fab-new-event" aria-label="Novo Evento">
+                ➕
+            </button>
+            <button class="bottom-nav-item" data-view="settings" aria-label="Ajustes">
+                <span class="bottom-nav-item-icon">⚙️</span>
+                <span class="bottom-nav-item-label">Ajustes</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Handler Global de Erros (ANTES de tudo) -->
+    <script>
+      // ============================================
+      // BLOQUEIO COMPLETO DE ALERTS NATIVOS
+      // ============================================
+      // Override do alert nativo ANTES de qualquer coisa
+      const originalAlert = window.alert;
+      window.alert = function(message) {
+        const errorMsg = String(message || 'Erro desconhecido');
+        console.warn('⚠️ alert() bloqueado:', errorMsg);
+        
+        // Tenta usar toast se disponível
+        if (window.toast && typeof window.toast.error === 'function') {
+          window.toast.error(errorMsg);
+        } else {
+          console.error('Erro (toast não disponível):', errorMsg);
+          // Se toast não estiver disponível, cria um toast manual simples
+          setTimeout(() => {
+            if (window.toast && typeof window.toast.error === 'function') {
+              window.toast.error(errorMsg);
+            }
+          }, 500);
+        }
+        
+        // NUNCA chama originalAlert - bloqueia completamente
+        return undefined;
+      };
+      
+      // ============================================
+      // HANDLER GLOBAL DE ERROS
+      // ============================================
+      // Handler global de erros para evitar alerts nativos
+      // Registrado ANTES de qualquer código para capturar todos os erros
+      window.addEventListener('error', function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        
+        // Captura diferentes tipos de mensagens de erro
+        let errorMsg = 'Erro desconhecido';
+        if (event.error) {
+          if (event.error.message) {
+            errorMsg = event.error.message;
+          } else if (typeof event.error === 'string') {
+            errorMsg = event.error;
+          } else {
+            errorMsg = String(event.error);
+          }
+        } else if (event.message) {
+          errorMsg = event.message;
+        }
+        
+        console.error('❌ Erro global capturado:', errorMsg, {
+          error: event.error,
+          message: event.message,
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+          stack: event.error?.stack
+        });
+        
+        // NUNCA usar alert - sempre usar toast ou console
+        if (window.toast && typeof window.toast.error === 'function') {
+          window.toast.error('Erro: ' + errorMsg);
+        } else {
+          console.error('Erro (toast não disponível ainda):', errorMsg);
+          // Aguarda um pouco e tenta novamente
+          setTimeout(() => {
+            if (window.toast && typeof window.toast.error === 'function') {
+              window.toast.error('Erro: ' + errorMsg);
+            }
+          }, 500);
+        }
+        
+        return false; // Previne comportamento padrão
+      }, true); // true = captura na fase de captura (antes de outros handlers)
+      
+      // Handler para promessas rejeitadas não tratadas
+      window.addEventListener('unhandledrejection', function(event) {
+        event.preventDefault();
+        
+        let errorMsg = 'Erro em promessa não tratada';
+        if (event.reason) {
+          if (event.reason.message) {
+            errorMsg = event.reason.message;
+          } else if (typeof event.reason === 'string') {
+            errorMsg = event.reason;
+          } else {
+            errorMsg = String(event.reason);
+          }
+        }
+        
+        console.error('❌ Promessa rejeitada não tratada:', errorMsg, event.reason);
+        
+        // NUNCA usar alert - sempre usar toast ou console
+        if (window.toast && typeof window.toast.error === 'function') {
+          window.toast.error('Erro: ' + errorMsg);
+        } else {
+          console.error('Erro (toast não disponível ainda):', errorMsg);
+          // Aguarda um pouco e tenta novamente
+          setTimeout(() => {
+            if (window.toast && typeof window.toast.error === 'function') {
+              window.toast.error('Erro: ' + errorMsg);
+            }
+          }, 500);
+        }
+      });
+      
+      // Proteção adicional: intercepta qualquer tentativa de usar alert
+      Object.defineProperty(window, 'alert', {
+        value: window.alert,
+        writable: false,
+        configurable: false
+      });
+    </script>
+    
+    <!-- Domain Layer -->
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
