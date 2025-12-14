@@ -7,30 +7,38 @@ Esta camada contém os casos de uso (use cases) da aplicação, que orquestram a
 ```
 src/application/
 ├── use-cases/
-│   ├── CreateEvent.js          # Criar novo evento
-│   ├── AddTransaction.js        # Adicionar transação (com cálculo automático)
-│   ├── GetEventSummary.js      # Obter resumo financeiro do evento
-│   └── UpdateSettings.js        # Atualizar configurações
-├── index.js                    # Exportações centralizadas
-└── README.md                   # Este arquivo
+│   ├── CreateTask.js              # Criar nova tarefa
+│   ├── GetTaskSummary.js          # Obter resumo da tarefa (tempo e faturamento)
+│   ├── AddWorkLog.js              # Adicionar apontamento de tempo
+│   ├── UpdateTask.js              # Atualizar tarefa
+│   ├── DeleteTask.js              # Excluir tarefa
+│   ├── UpdateWorkLog.js           # Atualizar apontamento de tempo
+│   ├── DeleteWorkLog.js           # Excluir apontamento de tempo
+│   ├── UpdateSettings.js          # Atualizar configurações
+│   ├── GenerateTimesheetReport.js # Gerar timesheet mensal
+│   └── data/
+│       ├── ExportData.js          # Exportar backup de dados
+│       └── ImportData.js          # Importar backup de dados
+├── index.js                       # Exportações centralizadas
+└── README.md                      # Este arquivo
 ```
 
 ## 🎯 Casos de Uso
 
-### CreateEvent
+### CreateTask
 
-Cria um novo evento no sistema.
+Cria uma nova tarefa no sistema.
 
 **Dependências:**
-- `EventRepository`
+- `TaskRepository`
 
 **Entrada:**
 ```javascript
 {
-  name: string,           // Nome do evento (obrigatório)
-  date: string,           // Data do evento (obrigatório)
+  title: string,          // Título da tarefa (obrigatório)
+  project: string,        // Projeto/Módulo (obrigatório)
   description?: string,   // Descrição opcional
-  status?: string         // Status inicial (padrão: 'PLANNED')
+  status?: string         // Status inicial (padrão: 'TODO')
 }
 ```
 
@@ -38,135 +46,36 @@ Cria um novo evento no sistema.
 ```javascript
 {
   success: boolean,
-  data?: Event,           // Evento criado
+  data?: Task,           // Tarefa criada
   error?: string          // Mensagem de erro
 }
 ```
 
 **Exemplo:**
 ```javascript
-const createEvent = new CreateEvent(eventRepository);
-const result = await createEvent.execute({
-  name: 'Workshop de Culinária',
-  date: '2024-12-15',
-  description: 'Workshop sobre técnicas avançadas'
+const createTask = new CreateTask(taskRepository);
+const result = await createTask.execute({
+  title: 'Implementar autenticação',
+  project: 'E-commerce',
+  description: 'Sistema de login e registro'
 });
 ```
 
 ---
 
-### AddTransaction
+### GetTaskSummary
 
-Adiciona uma transação (gasto ou ganho) a um evento.
-
-**Características especiais:**
-- Para transações de **KM** (`category: 'km'`), calcula automaticamente o valor usando `distance * rateKm` das configurações
-- Busca automaticamente as configurações atuais (Settings) quando necessário
+Retorna o resumo completo de uma tarefa (tempo trabalhado e faturamento).
 
 **Dependências:**
-- `TransactionRepository`
-- `EventRepository`
-- `SettingsRepository`
-
-**Entrada para EXPENSE:**
-```javascript
-{
-  eventId: string,        // ID do evento (obrigatório)
-  type: 'EXPENSE',        // Tipo da transação
-  description: string,    // Descrição (obrigatório)
-  amount: number,         // Valor monetário (obrigatório)
-  hasReceipt?: boolean   // Se tem nota fiscal (padrão: false)
-}
-```
-
-**Entrada para INCOME (Diária/Hora Extra):**
-```javascript
-{
-  eventId: string,           // ID do evento (obrigatório)
-  type: 'INCOME',            // Tipo da transação
-  description: string,       // Descrição (obrigatório)
-  amount: number,            // Valor monetário (obrigatório)
-  isReimbursement?: boolean, // Se é reembolso (padrão: false)
-  category?: 'diaria' | 'hora_extra'  // Categoria opcional
-}
-```
-
-**Entrada para INCOME (KM):**
-```javascript
-{
-  eventId: string,           // ID do evento (obrigatório)
-  type: 'INCOME',            // Tipo da transação
-  description: string,       // Descrição (obrigatório)
-  category: 'km',            // Categoria
-  distance: number,          // Distância em KM (obrigatório)
-  isReimbursement?: boolean  // Se é reembolso (padrão: true)
-  // amount é calculado automaticamente: distance * rateKm
-}
-```
-
-**Saída:**
-```javascript
-{
-  success: boolean,
-  data?: Transaction,    // Transação criada
-  error?: string          // Mensagem de erro
-}
-```
-
-**Exemplos:**
-
-```javascript
-const addTransaction = new AddTransaction(
-  transactionRepository,
-  eventRepository,
-  settingsRepository
-);
-
-// Adicionar despesa
-await addTransaction.execute({
-  eventId: 'event_123',
-  type: 'EXPENSE',
-  description: 'Compra de ingredientes',
-  amount: 500.00,
-  hasReceipt: false
-});
-
-// Adicionar KM rodado (cálculo automático)
-await addTransaction.execute({
-  eventId: 'event_123',
-  type: 'INCOME',
-  description: 'Deslocamento até o evento',
-  category: 'km',
-  distance: 150,
-  isReimbursement: true
-});
-
-// Adicionar honorário (diária)
-await addTransaction.execute({
-  eventId: 'event_123',
-  type: 'INCOME',
-  description: 'Diária do evento',
-  amount: 1000.00,
-  isReimbursement: false,
-  category: 'diaria'
-});
-```
-
----
-
-### GetEventSummary
-
-Retorna o resumo financeiro completo de um evento.
-
-**Dependências:**
-- `EventRepository`
-- `TransactionRepository`
+- `TaskRepository`
+- `WorkLogRepository`
 - `SettingsRepository`
 
 **Entrada:**
 ```javascript
 {
-  eventId: string  // ID do evento (obrigatório)
+  taskId: string  // ID da tarefa (obrigatório)
 }
 ```
 
@@ -175,35 +84,17 @@ Retorna o resumo financeiro completo de um evento.
 {
   success: boolean,
   data?: {
-    event: {
-      id: string,
-      name: string,
-      date: string,
-      status: string
-    },
+    task: Task,
+    workLogs: WorkLog[],
     totals: {
-      totalSpent: number,              // Total Gasto (Saída do bolso)
-      totalToReceive: number,          // Total a Receber (Gastos + Honorários)
-      netProfit: number,               // Lucro Líquido Previsto (Apenas honorários)
-      totalReimbursements: number,     // Total de reembolsos
-      totalFees: number,               // Total de honorários
-      netBalance: number               // Saldo líquido (receitas - despesas)
+      totalDurationMinutes: number,      // Tempo total trabalhado (minutos)
+      totalBillableMinutes: number,      // Tempo total faturado (minutos)
+      totalBillableHours: number,        // Tempo total faturado (horas)
+      totalBillableAmount: number,       // Valor total faturado (R$)
+      workLogsCount: number              // Quantidade de apontamentos
     },
-    breakdown: {
-      expenses: Array,                 // Lista de despesas
-      income: Array,                   // Lista de receitas
-      reimbursements: Array,           // Lista de reembolsos
-      fees: Array                      // Lista de honorários
-    },
-    receiptStatus: {
-      withReceipt: number,            // Quantidade com nota fiscal
-      withoutReceipt: number           // Quantidade sem nota fiscal
-    },
-    expectedReceiptDate: string,      // Data Prevista de Recebimento
-    transactionCount: {
-      total: number,
-      expenses: number,
-      income: number
+    settings: {
+      hourlyRate: number                 // Taxa horária configurada
     }
   },
   error?: string
@@ -212,22 +103,203 @@ Retorna o resumo financeiro completo de um evento.
 
 **Exemplo:**
 ```javascript
-const getEventSummary = new GetEventSummary(
-  eventRepository,
-  transactionRepository,
+const getTaskSummary = new GetTaskSummary(
+  taskRepository,
+  workLogRepository,
   settingsRepository
 );
 
-const result = await getEventSummary.execute({
-  eventId: 'event_123'
+const result = await getTaskSummary.execute({
+  taskId: 'task_123'
 });
 
 if (result.success) {
   const summary = result.data;
-  console.log('Total Gasto:', summary.totals.totalSpent);
-  console.log('Total a Receber:', summary.totals.totalToReceive);
-  console.log('Lucro Líquido:', summary.totals.netProfit);
-  console.log('Data Prevista:', summary.expectedReceiptDate);
+  console.log('Tempo Trabalhado:', summary.totals.totalDurationMinutes, 'min');
+  console.log('Tempo Faturado:', summary.totals.totalBillableHours, 'h');
+  console.log('Valor Faturado:', summary.totals.totalBillableAmount);
+}
+```
+
+---
+
+### AddWorkLog
+
+Adiciona um apontamento de tempo a uma tarefa.
+
+**Características especiais:**
+- Calcula automaticamente a duração em minutos
+- Aplica regra de mínimo faturado (30 minutos por padrão)
+- Calcula valor faturado baseado na taxa horária configurada
+
+**Dependências:**
+- `WorkLogRepository`
+- `TaskRepository`
+- `SettingsRepository`
+
+**Entrada:**
+```javascript
+{
+  taskId: string,        // ID da tarefa (obrigatório)
+  startTime: string,     // Data/hora de início (ISO string, obrigatório)
+  endTime: string,       // Data/hora de fim (ISO string, obrigatório)
+  description?: string   // Descrição opcional
+}
+```
+
+**Saída:**
+```javascript
+{
+  success: boolean,
+  data?: WorkLog,        // Apontamento criado
+  error?: string          // Mensagem de erro
+}
+```
+
+**Exemplo:**
+```javascript
+const addWorkLog = new AddWorkLog(
+  workLogRepository,
+  taskRepository,
+  settingsRepository
+);
+
+await addWorkLog.execute({
+  taskId: 'task_123',
+  startTime: '2024-01-01T09:00:00.000Z',
+  endTime: '2024-01-01T11:30:00.000Z',
+  description: 'Desenvolvimento da tela de login'
+});
+```
+
+---
+
+### UpdateTask
+
+Atualiza os dados de uma tarefa existente.
+
+**Dependências:**
+- `TaskRepository`
+
+**Entrada:**
+```javascript
+{
+  taskId: string,        // ID da tarefa (obrigatório)
+  title?: string,        // Novo título
+  description?: string,  // Nova descrição
+  project?: string,      // Novo projeto/módulo
+  status?: string        // Novo status
+}
+```
+
+**Saída:**
+```javascript
+{
+  success: boolean,
+  data?: Task,           // Tarefa atualizada
+  error?: string          // Mensagem de erro
+}
+```
+
+**Exemplo:**
+```javascript
+const updateTask = new UpdateTask(taskRepository);
+
+await updateTask.execute({
+  taskId: 'task_123',
+  title: 'Implementar autenticação OAuth',
+  status: 'DOING'
+});
+```
+
+---
+
+### DeleteTask
+
+Remove uma tarefa e todos os seus apontamentos associados.
+
+**Dependências:**
+- `TaskRepository`
+- `WorkLogRepository`
+
+**Entrada:**
+```javascript
+{
+  taskId: string  // ID da tarefa (obrigatório)
+}
+```
+
+**Saída:**
+```javascript
+{
+  success: boolean,
+  message?: string,  // Mensagem de sucesso
+  error?: string      // Mensagem de erro
+}
+```
+
+**Exemplo:**
+```javascript
+const deleteTask = new DeleteTask(taskRepository, workLogRepository);
+
+await deleteTask.execute({
+  taskId: 'task_123'
+});
+```
+
+---
+
+### UpdateWorkLog
+
+Atualiza um apontamento de tempo existente.
+
+**Dependências:**
+- `WorkLogRepository`
+- `TaskRepository`
+- `SettingsRepository`
+
+**Entrada:**
+```javascript
+{
+  workLogId: string,    // ID do apontamento (obrigatório)
+  startTime?: string,   // Nova data/hora de início
+  endTime?: string,     // Nova data/hora de fim
+  description?: string  // Nova descrição
+}
+```
+
+**Saída:**
+```javascript
+{
+  success: boolean,
+  data?: WorkLog,       // Apontamento atualizado
+  error?: string         // Mensagem de erro
+}
+```
+
+---
+
+### DeleteWorkLog
+
+Remove um apontamento de tempo.
+
+**Dependências:**
+- `WorkLogRepository`
+- `TaskRepository`
+
+**Entrada:**
+```javascript
+{
+  workLogId: string  // ID do apontamento (obrigatório)
+}
+```
+
+**Saída:**
+```javascript
+{
+  success: boolean,
+  message?: string,  // Mensagem de sucesso
+  error?: string      // Mensagem de erro
 }
 ```
 
@@ -235,7 +307,7 @@ if (result.success) {
 
 ### UpdateSettings
 
-Atualiza os valores padrão do sistema (taxas e dias de reembolso).
+Atualiza as configurações globais do sistema.
 
 **Dependências:**
 - `SettingsRepository`
@@ -243,11 +315,8 @@ Atualiza os valores padrão do sistema (taxas e dias de reembolso).
 **Entrada:**
 ```javascript
 {
-  rateKm?: number,                    // Nova taxa por KM
-  defaultReimbursementDays?: number,  // Novos dias padrão para reembolso
-  maxHotelRate?: number,              // Novo teto de hospedagem
-  standardDailyRate?: number,         // Nova diária técnica padrão
-  overtimeRate?: number               // Nova taxa de hora extra
+  hourlyRate?: number,           // Nova taxa horária (R$)
+  minBillableMinutes?: number   // Novo tempo mínimo faturado (minutos)
 }
 // Pelo menos um campo deve ser informado
 ```
@@ -265,17 +334,119 @@ Atualiza os valores padrão do sistema (taxas e dias de reembolso).
 ```javascript
 const updateSettings = new UpdateSettings(settingsRepository);
 
-// Atualizar apenas a taxa de KM
 await updateSettings.execute({
-  rateKm: 1.00
+  hourlyRate: 70.00,
+  minBillableMinutes: 30
 });
+```
 
-// Atualizar múltiplos campos
-await updateSettings.execute({
-  rateKm: 1.00,
-  overtimeRate: 80.00,
-  defaultReimbursementDays: 30
-});
+---
+
+### GenerateTimesheetReport
+
+Gera um relatório mensal de timesheet (apontamentos de tempo).
+
+**Dependências:**
+- `TaskRepository`
+- `WorkLogRepository`
+- `SettingsRepository`
+
+**Entrada:**
+```javascript
+month: number,  // Mês (1-12)
+year: number    // Ano (ex: 2024)
+```
+
+**Saída:**
+```javascript
+{
+  success: boolean,
+  data?: {
+    header: {
+      period: string,  // Período formatado (ex: "Janeiro de 2024")
+      month: number,
+      year: number
+    },
+    entries: Array<{
+      date: string,
+      taskTitle: string,
+      project: string,
+      durationMinutes: number,
+      billableMinutes: number,
+      billableHours: number,
+      billableAmount: number
+    }>,
+    totals: {
+      totalDurationMinutes: number,
+      totalBillableMinutes: number,
+      totalBillableHours: number,
+      totalBillableAmount: number,
+      entriesCount: number
+    },
+    settings: {
+      hourlyRate: number
+    }
+  },
+  error?: string
+}
+```
+
+**Exemplo:**
+```javascript
+const generateTimesheetReport = new GenerateTimesheetReport(
+  taskRepository,
+  workLogRepository,
+  settingsRepository
+);
+
+const result = await generateTimesheetReport.execute(1, 2024); // Janeiro de 2024
+```
+
+---
+
+### ExportData
+
+Exporta todos os dados do sistema para um arquivo JSON de backup.
+
+**Dependências:**
+- `TaskRepository`
+- `WorkLogRepository`
+- `SettingsRepository`
+
+**Saída:**
+```javascript
+{
+  version: string,
+  exportDate: string,
+  tasks: Array,
+  workLogs: Array,
+  settings: Object
+}
+```
+
+---
+
+### ImportData
+
+Importa dados de um arquivo JSON de backup.
+
+**Dependências:**
+- `TaskRepository`
+- `WorkLogRepository`
+- `SettingsRepository`
+
+**Entrada:**
+```javascript
+backupData: string | Object  // JSON string ou objeto com dados do backup
+```
+
+**Saída:**
+```javascript
+{
+  tasksCount: number,
+  workLogsCount: number,
+  exportDate: string
+}
 ```
 
 ## 🔄 Fluxo de Dados
@@ -296,5 +467,24 @@ Infrastructure Layer (Repositories Implementation)
 2. **Dependency Inversion**: Use cases dependem apenas de interfaces, não de implementações
 3. **Validação de Entrada**: Todos os use cases validam seus dados de entrada
 4. **Tratamento de Erros**: Retornos padronizados com `success` e `error`
-5. **Cálculo Automático**: Lógica de negócio encapsulada (ex: cálculo de KM/Tempo)
+5. **Cálculo Automático**: Lógica de negócio encapsulada (ex: cálculo de tempo faturado com mínimo)
 
+## 📝 Regras de Negócio Implementadas
+
+### Tempo Mínimo Faturável
+
+- Por padrão, tarefas com menos de 30 minutos são faturadas como 30 minutos (0.5h)
+- Valor configurável em Settings (`minBillableMinutes`)
+- Aplicado automaticamente em `AddWorkLog` e `UpdateWorkLog`
+
+### Cálculo de Faturamento
+
+- Valor faturado = (tempo faturado em horas) × (taxa horária)
+- Tempo faturado considera o mínimo de 30 minutos
+- Taxa horária configurável em Settings (`hourlyRate`)
+
+### Proteção de Dados
+
+- Tarefas com status `BILLED` não podem ser editadas ou excluídas
+- Apontamentos de tarefas faturadas não podem ser editados ou excluídos
+- Validações garantem integridade dos dados

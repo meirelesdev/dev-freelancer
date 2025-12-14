@@ -67,7 +67,9 @@ class App {
         this.currentTaskId = null; // Limpa o ID da tarefa ao voltar ao dashboard
         this.navigateTo('dashboard');
       } else if (view === 'timesheet' || view === 'monthly-report') {
-        this.navigateTo(view === 'timesheet' ? 'timesheet' : 'monthly-report');
+        this.navigateTo('timesheet');
+      } else if (view === 'settings') {
+        this.navigateTo('settings');
       }
     });
   }

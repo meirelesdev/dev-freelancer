@@ -8,8 +8,10 @@ Esta camada contém as implementações concretas dos repositórios usando `loca
 src/infrastructure/
 ├── repositories/
 │   ├── LocalStorageSettingsRepository.js    # Implementação de SettingsRepository
-│   ├── LocalStorageEventRepository.js       # Implementação de EventRepository
-│   └── LocalStorageTransactionRepository.js # Implementação de TransactionRepository
+│   ├── LocalStorageTaskRepository.js         # Implementação de TaskRepository
+│   ├── LocalStorageWorkLogRepository.js      # Implementação de WorkLogRepository
+│   ├── LocalStorageEventRepository.js       # Implementação antiga (compatibilidade)
+│   └── LocalStorageTransactionRepository.js  # Implementação antiga (compatibilidade)
 ├── index.js                                  # Exportações centralizadas
 └── README.md                                 # Este arquivo
 ```
@@ -20,7 +22,7 @@ src/infrastructure/
 
 Implementa `SettingsRepository` usando `localStorage`.
 
-**Chave de armazenamento**: `gi_financas_settings`
+**Chave de armazenamento**: `devtracker_settings`
 
 **Métodos:**
 - `save(settings)` - Salva configurações no localStorage
@@ -31,120 +33,103 @@ Implementa `SettingsRepository` usando `localStorage`.
 - Usa `Settings.restore()` para converter JSON de volta para instância
 - Retorna `null` se não houver dados (não cria padrão automaticamente)
 
-### LocalStorageEventRepository
+### LocalStorageTaskRepository
 
-Implementa `EventRepository` usando `localStorage`.
+Implementa `TaskRepository` usando `localStorage`.
 
-**Chave de armazenamento**: `gi_financas_events`
+**Chave de armazenamento**: `devtracker_tasks`
 
 **Métodos principais:**
-- `save(event)` - Salva evento
+- `save(task)` - Salva tarefa
 - `findById(id)` - Busca por ID
 - `findAll(options)` - Lista com filtros e ordenação
-- `delete(id)` - Remove evento
+  - `options.status` - Filtrar por status (TODO, DOING, DONE, BILLED)
+  - `options.project` - Filtrar por projeto/módulo
+  - `options.orderBy` - Ordenar por ('createdAt', 'title', 'project')
+  - `options.order` - Direção ('asc', 'desc')
+- `delete(id)` - Remove tarefa
 - `exists(id)` - Verifica existência
 
-**Métodos de cálculo financeiro:**
-- `calculateTotalExpenses(eventId)` - Total de despesas
-- `calculateTotalIncome(eventId)` - Total de receitas
-- `calculateTotalReimbursements(eventId)` - Total de reembolsos
-- `calculateTotalFees(eventId)` - Total de honorários
-- `calculateNetBalance(eventId)` - Saldo líquido
-- `calculateNetProfit(eventId)` - Lucro líquido
-- `getFinancialSummary(eventId)` - Resumo completo
-- `countExpensesWithReceipt(eventId)` - Conta despesas com NF
-- `countExpensesWithoutReceipt(eventId)` - Conta despesas sem NF
-
 **Características:**
-- Usa `Event.restore()` para converter JSON de volta para instância
-- Métodos de cálculo delegam para `TransactionRepository` (deve ser injetado)
-- Suporta ordenação por `date`, `name` ou `createdAt`
-- Suporta filtro por `status`
+- Usa `Task.restore()` para converter JSON de volta para instância
+- Suporta ordenação por `createdAt`, `title` ou `project`
+- Suporta filtro por `status` e `project`
+- Tratamento de dados corrompidos com backup automático
 
-**Dependência:**
-- Requer `TransactionRepository` injetado no construtor para métodos de cálculo
+### LocalStorageWorkLogRepository
 
-### LocalStorageTransactionRepository
+Implementa `WorkLogRepository` usando `localStorage`.
 
-Implementa `TransactionRepository` usando `localStorage`.
-
-**Chave de armazenamento**: `gi_financas_transactions`
+**Chave de armazenamento**: `devtracker_worklogs`
 
 **Métodos principais:**
-- `save(transaction)` - Salva transação
+- `save(workLog)` - Salva apontamento de tempo
 - `findById(id)` - Busca por ID
-- `findByEventId(eventId)` - Lista transações de um evento
-- `findAll(options)` - Lista com filtros (eventId, type)
-- `delete(id)` - Remove transação
-- `deleteByEventId(eventId)` - Remove todas as transações de um evento
+- `findByTaskId(taskId)` - Lista apontamentos de uma tarefa
+- `findAll(options)` - Lista com filtros
+  - `options.taskId` - Filtrar por tarefa
+  - `options.startDate` - Filtrar por data inicial (ISO string)
+  - `options.endDate` - Filtrar por data final (ISO string)
+- `delete(id)` - Remove apontamento
+- `deleteByTaskId(taskId)` - Remove todos os apontamentos de uma tarefa
 
 **Métodos de cálculo:**
-- `calculateTotalExpenses(eventId)` - Total de despesas
-- `calculateTotalIncome(eventId)` - Total de receitas
-- `calculateTotalReimbursements(eventId)` - Total de reembolsos (INCOME com isReimbursement=true)
-- `calculateTotalFees(eventId)` - Total de honorários (INCOME com isReimbursement=false)
-- `countExpensesWithReceipt(eventId)` - Conta despesas com NF
-- `countExpensesWithoutReceipt(eventId)` - Conta despesas sem NF
+- `calculateTotalBillable(taskId)` - Total faturado de uma tarefa
+- `calculateTotalDurationMinutes(taskId)` - Total de minutos trabalhados
 
 **Características:**
-- Usa `Transaction.restore()` para converter JSON de volta para instância
-- Filtra transações por `eventId` e `type` quando solicitado
+- Usa `WorkLog.restore()` para converter JSON de volta para instância
+- Filtra apontamentos por `taskId` e intervalo de datas quando solicitado
 - Todos os cálculos são feitos localmente (não depende de outros repositórios)
+- Tratamento de dados corrompidos com backup automático
+
+### Repositórios Antigos (Compatibilidade)
+
+Os seguintes repositórios ainda existem para compatibilidade durante a migração:
+
+- **LocalStorageEventRepository** - Chave: `gi_financas_events`
+- **LocalStorageTransactionRepository** - Chave: `gi_financas_transactions`
+
+Estes repositórios não são mais utilizados pelo sistema principal, mas são mantidos para permitir migração de dados antigos se necessário.
 
 ## 💾 Estrutura de Dados no localStorage
 
 ### Settings
 ```json
 {
-  "rateKm": 0.90,
-  "defaultReimbursementDays": 21,
-  "maxHotelRate": 280.00,
-  "standardDailyRate": 300.00,
-  "overtimeRate": 75.00,
+  "hourlyRate": 60.00,
+  "minBillableMinutes": 30,
   "updatedAt": "2024-01-01T00:00:00.000Z"
 }
 ```
 
-### Events
+### Tasks
 ```json
 [
   {
-    "id": "event_123",
-    "name": "Workshop de Culinária",
-    "date": "2024-12-15",
-    "status": "PLANNED",
-    "description": "...",
+    "id": "task_123",
+    "title": "Implementar autenticação",
+    "description": "Sistema de login e registro",
+    "project": "E-commerce",
+    "status": "DOING",
     "createdAt": "2024-01-01T00:00:00.000Z",
+    "finishedAt": null,
     "updatedAt": "2024-01-01T00:00:00.000Z"
   }
 ]
 ```
 
-### Transactions
+### WorkLogs
 ```json
 [
   {
-    "id": "expense_123",
-    "eventId": "event_123",
-    "type": "EXPENSE",
-    "description": "Compra de ingredientes",
-    "amount": 500.00,
-    "metadata": {
-      "hasReceipt": false
-    },
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z"
-  },
-  {
-    "id": "income_123",
-    "eventId": "event_123",
-    "type": "INCOME",
-    "description": "Diária do evento",
-    "amount": 1000.00,
-    "metadata": {
-      "isReimbursement": false,
-      "category": "diaria"
-    },
+    "id": "worklog_123",
+    "taskId": "task_123",
+    "startTime": "2024-01-01T09:00:00.000Z",
+    "endTime": "2024-01-01T11:30:00.000Z",
+    "durationMinutes": 150,
+    "billableAmount": 150.00,
+    "description": "Desenvolvimento da tela de login",
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z"
   }
@@ -157,59 +142,70 @@ Implementa `TransactionRepository` usando `localStorage`.
 
 ```javascript
 // Criar repositórios
-const transactionRepository = new LocalStorageTransactionRepository();
-const eventRepository = new LocalStorageEventRepository(transactionRepository);
+const workLogRepository = new LocalStorageWorkLogRepository();
+const taskRepository = new LocalStorageTaskRepository();
 const settingsRepository = new LocalStorageSettingsRepository();
 
 // Usar nos use cases
-const createEvent = new CreateEvent(eventRepository);
-const addTransaction = new AddTransaction(
-  transactionRepository,
-  eventRepository,
-  settingsRepository
-);
+const createTask = new CreateTask(taskRepository);
+const addWorkLog = new AddWorkLog(workLogRepository, taskRepository, settingsRepository);
 ```
 
 ### Exemplo: Salvar e Buscar
 
 ```javascript
-// Salvar evento
-const event = Event.create('Workshop', '2024-12-15');
-await eventRepository.save(event);
+// Salvar tarefa
+const task = Task.create('Implementar API', 'Projeto X', 'Criar endpoints REST');
+await taskRepository.save(task);
 
-// Buscar evento
-const found = await eventRepository.findById(event.id);
+// Buscar tarefa
+const found = await taskRepository.findById(task.id);
 
-// Listar eventos ordenados por data
-const events = await eventRepository.findAll({
-  orderBy: 'date',
+// Listar tarefas ordenadas por data de criação
+const tasks = await taskRepository.findAll({
+  orderBy: 'createdAt',
+  order: 'desc'
+});
+
+// Filtrar tarefas por status
+const pendingTasks = await taskRepository.findAll({
+  status: 'TODO',
+  orderBy: 'createdAt',
   order: 'desc'
 });
 ```
 
-### Exemplo: Cálculos Financeiros
+### Exemplo: Apontamentos de Tempo
 
 ```javascript
-// Calcular totais de um evento
-const totalExpenses = await eventRepository.calculateTotalExpenses(eventId);
-const totalIncome = await eventRepository.calculateTotalIncome(eventId);
-const netBalance = await eventRepository.calculateNetBalance(eventId);
+// Buscar apontamentos de uma tarefa
+const workLogs = await workLogRepository.findByTaskId(taskId);
 
-// Obter resumo completo
-const summary = await eventRepository.getFinancialSummary(eventId);
+// Calcular total faturado de uma tarefa
+const totalBillable = await workLogRepository.calculateTotalBillable(taskId);
+
+// Buscar apontamentos por período
+const monthlyWorkLogs = await workLogRepository.findAll({
+  startDate: '2024-01-01T00:00:00.000Z',
+  endDate: '2024-01-31T23:59:59.999Z'
+});
 ```
 
 ## ⚠️ Observações Importantes
 
-1. **Dependência Circular**: `EventRepository` depende de `TransactionRepository` para cálculos financeiros. Sempre injete `TransactionRepository` no construtor.
+1. **Independência**: Os repositórios `TaskRepository` e `WorkLogRepository` são independentes entre si. Não há dependências circulares.
 
 2. **Conversão de Instâncias**: Todos os repositórios usam os métodos `restore()` das entidades para converter JSON de volta para instâncias com métodos.
 
 3. **Tratamento de Erros**: Todos os métodos têm tratamento de erro e retornam valores seguros (arrays vazios, null, 0) em caso de falha.
 
-4. **Performance**: Para grandes volumes de dados, considere implementar índices ou usar IndexedDB no futuro.
+4. **Recuperação de Dados Corrompidos**: Se os dados no `localStorage` estiverem corrompidos, os repositórios criam automaticamente um backup antes de limpar os dados.
 
-5. **Compatibilidade**: Usa `window.localStorage` diretamente, garantindo compatibilidade com navegadores modernos.
+5. **Performance**: Para grandes volumes de dados, considere implementar índices ou usar IndexedDB no futuro.
+
+6. **Compatibilidade**: Usa `window.localStorage` diretamente, garantindo compatibilidade com navegadores modernos.
+
+7. **Migração**: Os repositórios antigos (`EventRepository`, `TransactionRepository`) ainda existem para permitir migração de dados se necessário, mas não são mais utilizados pelo sistema principal.
 
 ## 🚀 Próximos Passos
 

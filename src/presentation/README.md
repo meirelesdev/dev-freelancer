@@ -12,22 +12,31 @@ src/presentation/
 │   ├── components.css     # Componentes reutilizáveis
 │   └── main.css           # Arquivo principal que importa todos
 ├── views/
-│   ├── DashboardView.js    # View do dashboard
-│   ├── EventDetailView.js # View de detalhe do evento
-│   └── SettingsView.js    # View de configurações
-└── App.js                 # Classe principal que gerencia navegação
+│   ├── DashboardView.js    # View do dashboard principal
+│   ├── TaskDetailView.js   # View de detalhe da tarefa
+│   ├── TimesheetView.js    # View para gerar timesheet mensal
+│   ├── ReportView.js       # View para renderizar relatórios em PDF
+│   └── SettingsView.js     # View de configurações
+├── components/
+│   └── modals/
+│       └── TimeLogModal.js  # Modal para registrar tempo trabalhado
+├── utils/
+│   ├── Formatters.js        # Utilitários de formatação
+│   └── Toast.js             # Sistema de notificações
+└── App.js                   # Classe principal que gerencia navegação
 ```
 
 ## 🎨 Design System
 
 ### Cores
 
-O sistema usa variáveis CSS para facilitar customização:
+O sistema usa variáveis CSS para facilitar customização (tema Dev/Tech):
 
-- **Primária**: `#667eea` (roxo/azul)
-- **Secundária**: `#764ba2` (roxo escuro)
+- **Primária**: `#2563EB` (azul royal)
+- **Background**: `#0F172A` (azul escuro/slate)
+- **Surface**: `#1E293B` (slate médio)
 - **Status**: Success, Warning, Danger, Info
-- **Neutras**: Background, Surface, Text, Border
+- **Neutras**: Text, Border
 
 ### Espaçamentos
 
@@ -53,36 +62,53 @@ Sistema de espaçamento consistente baseado em múltiplos de 4px:
 ### DashboardView
 
 Exibe:
-- Card destacado com "Total a Receber em Aberto"
-- Lista de eventos ativos
-- Navegação para detalhe do evento ao clicar
+- KPIs: Faturamento do Mês, Horas Trabalhadas, Tarefas Pendentes
+- Lista de tarefas recentes com status, projeto e valor acumulado
+- Botão FAB para criar nova tarefa
+- Navegação para detalhe da tarefa ao clicar
 
-### EventDetailView
+### TaskDetailView
 
 Exibe:
-- Informações do evento
-- Botão "+" para adicionar despesa rápida
-- Botão para adicionar KM/Viagem
-- Lista de despesas com indicador visual se falta nota fiscal
-- Botão para marcar nota fiscal como emitida
+- Informações da tarefa (título, projeto, descrição, status)
+- Cards de resumo: Tempo Trabalhado, Tempo Faturado, Valor Faturado
+- Botão "Registrar Tempo" para adicionar apontamentos
+- Lista de apontamentos de tempo com início, fim, duração e valor
+- Botões para editar/excluir tarefa e apontamentos
+
+### TimesheetView
+
+Exibe:
+- Interface para selecionar mês/ano
+- Botão para gerar timesheet mensal
+- Abre relatório em nova janela para impressão/PDF
+
+### ReportView
+
+Renderiza:
+- Timesheet de Desenvolvimento com colunas: Data, Tarefa, Módulo, Duração Real, Duração Faturada, Valor
+- Resumo com totais e taxa horária
+- Formatação otimizada para impressão/PDF
 
 ### SettingsView
 
 Exibe:
-- Formulário para alterar taxa de KM
-- Formulário para alterar taxa de hora de viagem
-- Formulário para alterar dias padrão de reembolso
+- Formulário para alterar valor hora (R$)
+- Formulário para alterar tempo mínimo faturável (minutos)
+- Funcionalidades de backup/restore de dados
 
 ## 🚀 Navegação
 
-A navegação funciona por abas na parte superior:
-- **Dashboard**: Tela principal
-- **Configurações**: Tela de configurações
+A navegação funciona por bottom navigation bar:
+- **🏠 Início**: Dashboard principal
+- **⏱️ Timesheet**: Geração de timesheet mensal
+- **⚙️ Ajustes**: Configurações do sistema
+- **➕ FAB**: Botão flutuante para criar nova tarefa
 
-Navegação para detalhe do evento acontece via evento customizado:
+Navegação para detalhe da tarefa acontece via evento customizado:
 ```javascript
 window.dispatchEvent(new CustomEvent('navigate', { 
-  detail: { view: 'event-detail', eventId: '...' } 
+  detail: { view: 'task-detail', taskId: '...' } 
 }));
 ```
 
@@ -95,30 +121,44 @@ O design é mobile-first, com breakpoints:
 
 ## 🎯 Funcionalidades Principais
 
-### Adicionar Despesa Rápida
+### Criar Tarefa
 
 Modal com:
-- Campo de descrição
-- Campo de valor
-- Checkbox para nota fiscal
+- Campo Projeto/Cliente (obrigatório)
+- Campo Título da Tarefa (obrigatório)
+- Campo Descrição (opcional)
+- Status padrão: TODO
+- Data padrão: Hoje
 
-### Adicionar KM/Viagem
+### Registrar Tempo
 
 Modal com:
-- Seleção de tipo (KM ou Tempo de Viagem)
-- Campo específico baseado no tipo
-- Campo de descrição
-- Cálculo automático do valor usando Settings
+- Campo Início (datetime-local)
+- Campo Fim (datetime-local)
+- Campo Descrição (opcional)
+- Prévia em tempo real: tempo trabalhado → tempo faturado → valor
+- Aplica regra de mínimo de 30 minutos automaticamente
 
-### Marcar Nota Fiscal
+### Gerar Timesheet
 
-Botão rápido para marcar despesa como tendo nota fiscal emitida.
+Interface com:
+- Seleção de mês e ano
+- Geração de relatório em nova janela
+- Formatação otimizada para impressão/PDF
+- Colunas: Data, Tarefa, Módulo, Duração Real, Duração Faturada, Valor
+
+### Backup e Restore
+
+Funcionalidades em SettingsView:
+- Exportar todos os dados para arquivo JSON
+- Importar dados de backup
+- Validação de estrutura de dados
 
 ## 🔧 Integração
 
 As views recebem dependências via construtor:
-- Repositórios (EventRepository, TransactionRepository, SettingsRepository)
-- Use Cases (AddTransaction, UpdateSettings)
+- Repositórios (TaskRepository, WorkLogRepository, SettingsRepository)
+- Use Cases (CreateTask, GetTaskSummary, AddWorkLog, UpdateTask, DeleteTask, UpdateWorkLog, DeleteWorkLog, UpdateSettings, GenerateTimesheetReport, ExportData, ImportData)
 
 A classe `App` gerencia a inicialização e navegação entre views.
 
