@@ -2,21 +2,21 @@
   "name": "Dev Freelancer",
   "short_name": "Dev Freelancer",
   "description": "Gestão de Tarefas e Apontamento de Horas para Desenvolvedores Freelancers",
-  "start_url": "/control-gi-mendes/",
-  "scope": "/control-gi-mendes/",
+  "start_url": "/dev-freelancer/",
+  "scope": "/dev-freelancer/",
   "display": "standalone",
   "background_color": "#0F172A",
   "theme_color": "#2563EB",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/control-gi-mendes/icon-192.png?v=2",
+      "src": "/dev-freelancer/icon-192.png?v=2",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/control-gi-mendes/icon-512.png?v=2",
+      "src": "/dev-freelancer/icon-512.png?v=2",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
@@ -30,22 +30,22 @@
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "Ver tarefas e apontamentos",
-      "url": "/control-gi-mendes/",
-      "icons": [{ "src": "/control-gi-mendes/icon-192.png?v=2", "sizes": "192x192" }]
+      "url": "/dev-freelancer/",
+      "icons": [{ "src": "/dev-freelancer/icon-192.png?v=2", "sizes": "192x192" }]
     },
     {
       "name": "Timesheet",
       "short_name": "Timesheet",
       "description": "Gerar relatório de horas",
-      "url": "/control-gi-mendes/#timesheet",
-      "icons": [{ "src": "/control-gi-mendes/icon-192.png?v=2", "sizes": "192x192" }]
+      "url": "/dev-freelancer/#timesheet",
+      "icons": [{ "src": "/dev-freelancer/icon-192.png?v=2", "sizes": "192x192" }]
     },
     {
       "name": "Configurações",
       "short_name": "Config",
       "description": "Configurar taxa horária",
-      "url": "/control-gi-mendes/#settings",
-      "icons": [{ "src": "/control-gi-mendes/icon-192.png?v=2", "sizes": "192x192" }]
+      "url": "/dev-freelancer/#settings",
+      "icons": [{ "src": "/dev-freelancer/icon-192.png?v=2", "sizes": "192x192" }]
     }
   ]
 }

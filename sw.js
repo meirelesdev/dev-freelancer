@@ -5,7 +5,7 @@
 
 const CACHE_NAME = 'dev-freelancer-v1'; // Cache para Dev Freelancer
 // Base path para GitHub Pages
-const BASE_PATH = '/control-gi-mendes';
+const BASE_PATH = '/dev-freelancer';
 
 const urlsToCache = [
   `${BASE_PATH}/`,

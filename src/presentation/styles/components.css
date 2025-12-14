@@ -462,6 +462,28 @@
   color: white;
 }
 
+.btn-info {
+  background: var(--color-info);
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-info:active {
+  background: #2563EB;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  color: white;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:active {
+  background: #DC2626;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+}
+
 .btn-sm {
   padding: var(--spacing-sm) var(--spacing-md);
   font-size: var(--font-size-sm);
