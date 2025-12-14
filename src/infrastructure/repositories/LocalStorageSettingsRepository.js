@@ -7,7 +7,7 @@ import { Settings } from '../../domain/entities/Settings.js';
 class LocalStorageSettingsRepository extends SettingsRepository {
   constructor() {
     super();
-    this.storageKey = 'gi_financas_settings';
+    this.storageKey = 'devtracker_settings';
   }
 
   /**
@@ -18,18 +18,8 @@ class LocalStorageSettingsRepository extends SettingsRepository {
   async save(settings) {
     try {
       const data = {
-        rateKm: settings.rateKm,
-        defaultReimbursementDays: settings.defaultReimbursementDays,
-        maxHotelRate: settings.maxHotelRate,
-        standardDailyRate: settings.standardDailyRate,
-        overtimeRate: settings.overtimeRate,
-        contractorName: settings.contractorName,
-        contractorCNPJ: settings.contractorCNPJ,
-        contractorAddress: settings.contractorAddress,
-        contractorRepresentative: settings.contractorRepresentative,
-        contractorCPF: settings.contractorCPF,
-        contractorPixKey: settings.contractorPixKey,
-        contractorEmails: settings.contractorEmails,
+        hourlyRate: settings.hourlyRate,
+        minBillableMinutes: settings.minBillableMinutes,
         updatedAt: settings.updatedAt
       };
       window.localStorage.setItem(this.storageKey, JSON.stringify(data));

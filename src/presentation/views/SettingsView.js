@@ -1,19 +1,18 @@
 /**
  * View: Configurações
- * Permite alterar valores de KM e Hora de Viagem
+ * Permite alterar valor por hora e tempo mínimo faturado
  */
 import { Settings } from '../../domain/entities/Settings.js';
 import { DEFAULT_VALUES } from '../../domain/constants/DefaultValues.js';
 
 class SettingsView {
-  constructor(settingsRepository, updateSettingsUseCase, exportDataUseCase = null, importDataUseCase = null, exportTransactionsToCSVUseCase = null, eventRepository = null, transactionRepository = null) {
+  constructor(settingsRepository, updateSettingsUseCase, exportDataUseCase = null, importDataUseCase = null, taskRepository = null, workLogRepository = null) {
     this.settingsRepository = settingsRepository;
     this.updateSettingsUseCase = updateSettingsUseCase;
     this.exportDataUseCase = exportDataUseCase;
     this.importDataUseCase = importDataUseCase;
-    this.exportTransactionsToCSVUseCase = exportTransactionsToCSVUseCase;
-    this.eventRepository = eventRepository;
-    this.transactionRepository = transactionRepository;
+    this.taskRepository = taskRepository;
+    this.workLogRepository = workLogRepository;
   }
 
   async render() {
@@ -38,98 +37,23 @@ class SettingsView {
         <div class="card">
           <form id="form-settings">
             <div class="form-group">
-              <label class="form-label">Preço por KM (R$)</label>
-              <input type="number" class="form-input" id="settings-rate-km" 
-                     step="0.01" min="0" value="${settings.rateKm}" required>
-              <small class="text-muted">Valor usado para calcular KM rodado (combustível)</small>
+              <label class="form-label">Valor Hora (R$)</label>
+              <input type="number" class="form-input" id="settings-hourly-rate" 
+                     step="0.01" min="0" value="${settings.hourlyRate || DEFAULT_VALUES.HOURLY_RATE}" required>
+              <small class="text-muted">Valor cobrado por hora trabalhada</small>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Dias Padrão para Reembolso</label>
-              <input type="number" class="form-input" id="settings-reimbursement-days" 
-                     step="1" min="1" max="365" value="${settings.defaultReimbursementDays}" required>
-              <small class="text-muted">Número de dias após o evento para calcular data prevista de recebimento</small>
+              <label class="form-label">Tempo Mínimo Faturável (min)</label>
+              <input type="number" class="form-input" id="settings-min-billable-minutes" 
+                     step="1" min="1" max="480" value="${settings.minBillableMinutes || DEFAULT_VALUES.MINIMUM_BILLABLE_MINUTES}" required>
+              <small class="text-muted">Tempo mínimo que será cobrado mesmo se a tarefa durar menos (regra de ${settings.minBillableMinutes || DEFAULT_VALUES.MINIMUM_BILLABLE_MINUTES} minutos)</small>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Teto de Hospedagem (R$)</label>
-              <input type="number" class="form-input" id="settings-max-hotel-rate" 
-                     step="0.01" min="0" value="${settings.maxHotelRate || DEFAULT_VALUES.MAX_HOTEL_RATE}" required>
-              <small class="text-muted">Valor máximo permitido para despesas de hospedagem conforme contrato</small>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Diária Técnica Padrão (R$)</label>
-              <input type="number" class="form-input" id="settings-standard-daily-rate" 
-                     step="0.01" min="0" value="${settings.standardDailyRate || DEFAULT_VALUES.DAILY_RATE}" required>
-              <small class="text-muted">Valor padrão da diária técnica lançada automaticamente ao criar evento</small>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Taxa de Hora Extra (R$)</label>
-              <input type="number" class="form-input" id="settings-overtime-rate" 
-                     step="0.01" min="0" value="${settings.overtimeRate || DEFAULT_VALUES.OVERTIME_RATE}" required>
-              <small class="text-muted">Valor por hora extra (trabalho adicional e tempo de viagem)</small>
-            </div>
-
-            <hr style="margin: var(--spacing-xl) 0; border: none; border-top: 2px solid var(--color-border);">
-
-            <h3 style="margin-bottom: var(--spacing-md); color: var(--color-text); font-size: 1.1em;">
-              📋 Dados da CONTRATADA (para Relatórios)
-            </h3>
-            <p class="text-muted" style="margin-bottom: var(--spacing-lg); font-size: 0.9em;">
-              Informações que aparecerão nos relatórios de prestação de contas
-            </p>
-
-            <div class="form-group">
-              <label class="form-label">Razão Social</label>
-              <input type="text" class="form-input" id="settings-contractor-name" 
-                     value="${settings.contractorName || DEFAULT_VALUES.CONTRACTOR_NAME}" required>
-              <small class="text-muted">Nome completo da empresa (CNPJ)</small>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">CNPJ</label>
-              <input type="text" class="form-input" id="settings-contractor-cnpj" 
-                     placeholder="XX.XXX.XXX/XXXX-XX" 
-                     value="${settings.contractorCNPJ || DEFAULT_VALUES.CONTRACTOR_CNPJ}" required>
-              <small class="text-muted">CNPJ no formato XX.XXX.XXX/XXXX-XX</small>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Endereço Completo</label>
-              <textarea class="form-input" id="settings-contractor-address" rows="3" required>${settings.contractorAddress || DEFAULT_VALUES.CONTRACTOR_ADDRESS}</textarea>
-              <small class="text-muted">Endereço completo da empresa</small>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Representante</label>
-              <input type="text" class="form-input" id="settings-contractor-representative" 
-                     value="${settings.contractorRepresentative || DEFAULT_VALUES.CONTRACTOR_REPRESENTATIVE}" required>
-              <small class="text-muted">Nome do representante legal</small>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">CPF do Representante</label>
-              <input type="text" class="form-input" id="settings-contractor-cpf" 
-                     placeholder="XXX.XXX.XXX-XX" 
-                     value="${settings.contractorCPF || DEFAULT_VALUES.CONTRACTOR_CPF}" required>
-              <small class="text-muted">CPF no formato XXX.XXX.XXX-XX</small>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Chave PIX</label>
-              <input type="text" class="form-input" id="settings-contractor-pix-key" 
-                     value="${settings.contractorPixKey || DEFAULT_VALUES.CONTRACTOR_PIX_KEY}" required>
-              <small class="text-muted">Chave PIX para recebimento (celular, e-mail ou chave aleatória)</small>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">E-mails para Envio de NF</label>
-              <input type="text" class="form-input" id="settings-contractor-emails" 
-                     placeholder="email1@exemplo.com, email2@exemplo.com" 
-                     value="${settings.contractorEmails || DEFAULT_VALUES.CONTRACTOR_EMAILS}" required>
-              <small class="text-muted">E-mails separados por vírgula para envio de notas fiscais</small>
+              <label class="form-label">Moeda</label>
+              <input type="text" class="form-input" value="BRL" disabled style="background-color: var(--color-surface-dark); cursor: not-allowed;">
+              <small class="text-muted">Moeda fixa em Real Brasileiro (BRL)</small>
             </div>
 
             <div class="modal-footer" style="margin-top: var(--spacing-xl);">
@@ -158,22 +82,16 @@ class SettingsView {
               <input type="file" id="input-restore-backup" accept=".json" style="display: none;">
               ⬆️ Restaurar Backup
             </label>
-
-            ${this.exportTransactionsToCSVUseCase ? `
-            <button class="btn btn-info" id="btn-export-csv" style="width: 100%;">
-              📊 Baixar Planilha (.csv)
-            </button>
-            ` : ''}
           </div>
         </div>
 
-        <div class="card" style="margin-top: var(--spacing-lg); border-left: 4px solid var(--color-info); background: linear-gradient(135deg, #E3F2FD 0%, #E1F5FE 100%);">
+        <div class="card" style="margin-top: var(--spacing-lg); border-left: 4px solid var(--color-info); background: linear-gradient(135deg, #1E293B 0%, #334155 100%);">
           <h3 style="margin-bottom: var(--spacing-md); color: var(--color-info);">
             🔄 Atualização do Sistema
           </h3>
           <p class="text-muted" style="margin-bottom: var(--spacing-md);">
             Force a atualização do aplicativo para carregar as últimas versões dos arquivos. 
-            <strong>Seus dados serão preservados</strong> (eventos, transações e configurações).
+            <strong>Seus dados serão preservados</strong> (tarefas, apontamentos e configurações).
           </p>
           <button class="btn btn-info" id="btn-force-update" style="width: 100%;">
             🔄 Atualizar Aplicativo
@@ -183,12 +101,12 @@ class SettingsView {
           </small>
         </div>
 
-        <div class="card" style="margin-top: var(--spacing-lg); border-left: 4px solid var(--color-danger); background: linear-gradient(135deg, #FFEBEE 0%, #FFF3E0 100%);">
+        <div class="card" style="margin-top: var(--spacing-lg); border-left: 4px solid var(--color-danger); background: linear-gradient(135deg, #1E293B 0%, #334155 100%);">
           <h3 style="margin-bottom: var(--spacing-md); color: var(--color-danger);">
             ⚠️ Zona de Perigo
           </h3>
           <p class="text-muted" style="margin-bottom: var(--spacing-md);">
-            Esta ação apagará <strong>todos</strong> os dados do sistema (eventos, transações e configurações). 
+            Esta ação apagará <strong>todos</strong> os dados do sistema (tarefas, apontamentos e configurações). 
             Esta ação não pode ser desfeita. Certifique-se de ter feito um backup antes.
           </p>
           <button class="btn btn-danger" id="btn-reset-all" style="width: 100%;">
@@ -223,32 +141,12 @@ class SettingsView {
   }
 
   async saveSettings() {
-    const rateKm = parseFloat(document.getElementById('settings-rate-km').value);
-    const defaultReimbursementDays = parseInt(document.getElementById('settings-reimbursement-days').value);
-    const maxHotelRate = parseFloat(document.getElementById('settings-max-hotel-rate').value);
-    const standardDailyRate = parseFloat(document.getElementById('settings-standard-daily-rate').value);
-    const overtimeRate = parseFloat(document.getElementById('settings-overtime-rate').value);
-    const contractorName = document.getElementById('settings-contractor-name').value.trim();
-    const contractorCNPJ = document.getElementById('settings-contractor-cnpj').value.trim();
-    const contractorAddress = document.getElementById('settings-contractor-address').value.trim();
-    const contractorRepresentative = document.getElementById('settings-contractor-representative').value.trim();
-    const contractorCPF = document.getElementById('settings-contractor-cpf').value.trim();
-    const contractorPixKey = document.getElementById('settings-contractor-pix-key').value.trim();
-    const contractorEmails = document.getElementById('settings-contractor-emails').value.trim();
+    const hourlyRate = parseFloat(document.getElementById('settings-hourly-rate').value);
+    const minBillableMinutes = parseInt(document.getElementById('settings-min-billable-minutes').value);
 
     const result = await this.updateSettingsUseCase.execute({
-      rateKm,
-      defaultReimbursementDays,
-      maxHotelRate,
-      standardDailyRate,
-      overtimeRate,
-      contractorName,
-      contractorCNPJ,
-      contractorAddress,
-      contractorRepresentative,
-      contractorCPF,
-      contractorPixKey,
-      contractorEmails
+      hourlyRate,
+      minBillableMinutes
     });
 
     if (result.success) {
@@ -285,12 +183,6 @@ class SettingsView {
       inputRestoreBackup.addEventListener('change', (e) => this.restoreBackup(e));
     }
 
-    // Exportar CSV
-    const btnExportCSV = document.getElementById('btn-export-csv');
-    if (btnExportCSV) {
-      btnExportCSV.addEventListener('click', () => this.exportCSV());
-    }
-
     // Reset de Fábrica
     const btnResetAll = document.getElementById('btn-reset-all');
     if (btnResetAll) {
@@ -318,7 +210,7 @@ class SettingsView {
       // Gera nome do arquivo com data
       const date = new Date();
       const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
-      const filename = `backup_gi_financas_${dateStr}.json`;
+      const filename = `backup_dev_freelancer_${dateStr}.json`;
 
       // Cria blob e faz download
       const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
@@ -331,7 +223,9 @@ class SettingsView {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      window.toast.success(`Backup exportado com sucesso! (${backupData.events.length} eventos, ${backupData.transactions.length} transações)`);
+      const tasksCount = backupData.tasks ? backupData.tasks.length : 0;
+      const workLogsCount = backupData.workLogs ? backupData.workLogs.length : 0;
+      window.toast.success(`Backup exportado com sucesso! (${tasksCount} tarefas, ${workLogsCount} apontamentos)`);
       
       btn.disabled = false;
       btn.textContent = originalText;
@@ -382,7 +276,7 @@ class SettingsView {
 
           window.toast.success(
             `Backup restaurado com sucesso! ` +
-            `(${result.eventsCount} eventos, ${result.transactionsCount} transações restaurados)`
+            `(${result.tasksCount || 0} tarefas, ${result.workLogsCount || 0} apontamentos restaurados)`
           );
 
           // Recarrega a página para aplicar os dados novos
@@ -408,53 +302,6 @@ class SettingsView {
   }
 
   /**
-   * Exporta transações para CSV
-   */
-  async exportCSV() {
-    try {
-      if (!this.exportTransactionsToCSVUseCase) {
-        window.toast.error('Funcionalidade de exportação CSV não disponível');
-        return;
-      }
-
-      const btn = document.getElementById('btn-export-csv');
-      const originalText = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = '⏳ Gerando...';
-
-      const csvContent = await this.exportTransactionsToCSVUseCase.execute();
-
-      // Gera nome do arquivo com data
-      const date = new Date();
-      const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
-      const filename = `transacoes_gi_financas_${dateStr}.csv`;
-
-      // Cria blob e faz download
-      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' }); // BOM para Excel
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      window.toast.success('Planilha CSV exportada com sucesso!');
-      
-      btn.disabled = false;
-      btn.textContent = originalText;
-    } catch (error) {
-      window.toast.error(`Erro ao exportar CSV: ${error.message}`);
-      const btn = document.getElementById('btn-export-csv');
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = '📊 Baixar Planilha (.csv)';
-      }
-    }
-  }
-
-  /**
    * Reset de fábrica - Apaga todos os dados
    */
   async resetAll() {
@@ -463,8 +310,8 @@ class SettingsView {
       const firstConfirm = window.prompt(
         '⚠️ ATENÇÃO CRÍTICA ⚠️\n\n' +
         'Esta ação apagará PERMANENTEMENTE:\n' +
-        '• Todos os eventos\n' +
-        '• Todas as transações\n' +
+        '• Todas as tarefas\n' +
+        '• Todos os apontamentos\n' +
         '• Todas as configurações\n\n' +
         'Esta ação NÃO PODE SER DESFEITA!\n\n' +
         'Digite "DELETAR" (em maiúsculas) para confirmar:'
@@ -493,19 +340,19 @@ class SettingsView {
       btn.disabled = true;
       btn.textContent = '⏳ Apagando...';
 
-      // Apaga todos os eventos
-      if (this.eventRepository) {
-        const events = await this.eventRepository.findAll();
-        for (const event of events) {
-          await this.eventRepository.delete(event.id);
+      // Apaga todas as tarefas
+      if (this.taskRepository) {
+        const tasks = await this.taskRepository.findAll();
+        for (const task of tasks) {
+          await this.taskRepository.delete(task.id);
         }
       }
 
-      // Apaga todas as transações
-      if (this.transactionRepository) {
-        const transactions = await this.transactionRepository.findAll();
-        for (const transaction of transactions) {
-          await this.transactionRepository.delete(transaction.id);
+      // Apaga todos os apontamentos
+      if (this.workLogRepository) {
+        const workLogs = await this.workLogRepository.findAll();
+        for (const workLog of workLogs) {
+          await this.workLogRepository.delete(workLog.id);
         }
       }
 
@@ -549,7 +396,7 @@ class SettingsView {
         '• Desregistrar o service worker atual\n' +
         '• Limpar o cache do navegador\n' +
         '• Recarregar a página com os arquivos mais recentes\n\n' +
-        '✅ Seus dados serão preservados (eventos, transações e configurações)\n\n' +
+        '✅ Seus dados serão preservados (tarefas, apontamentos e configurações)\n\n' +
         'Deseja continuar?'
       );
 
@@ -573,21 +420,16 @@ class SettingsView {
         const cacheNames = await caches.keys();
         await Promise.all(
           cacheNames.map(cacheName => {
-            console.log('��️ Limpando cache:', cacheName);
+            console.log('🗑️ Limpando cache:', cacheName);
             return caches.delete(cacheName);
           })
         );
         console.log('✅ Cache limpo');
       }
 
-      // Passo 3: Limpar cache do localStorage relacionado ao service worker (se houver)
-      // Nota: Não limpamos os dados do app (eventos, transações, configurações)
-      // Apenas cache relacionado ao service worker
-
       window.toast.success('Atualização concluída! A página será recarregada...');
 
-      // Passo 4: Recarregar a página com bypass do cache
-      // Usa window.location.reload(true) ou location.reload() com timestamp
+      // Passo 3: Recarregar a página com bypass do cache
       setTimeout(() => {
         // Força reload sem cache
         window.location.reload(true);
@@ -612,4 +454,3 @@ class SettingsView {
 
 // Export para uso em módulos ES6
 export { SettingsView };
-

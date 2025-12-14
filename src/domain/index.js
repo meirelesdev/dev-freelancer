@@ -1,5 +1,5 @@
 /**
- * Domain Layer - Chef Finance
+ * Domain Layer - Dev Freelancer
  * 
  * Este módulo exporta todas as entidades e interfaces de repositórios do domínio
  */

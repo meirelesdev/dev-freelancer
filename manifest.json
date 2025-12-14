@@ -1,12 +1,12 @@
 {
-  "name": "Chef Finance",
-  "short_name": "Chef Finance",
-  "description": "Gestão Financeira de Eventos Culinários",
+  "name": "Dev Freelancer",
+  "short_name": "Dev Freelancer",
+  "description": "Gestão de Tarefas e Apontamento de Horas para Desenvolvedores Freelancers",
   "start_url": "/control-gi-mendes/",
   "scope": "/control-gi-mendes/",
   "display": "standalone",
-  "background_color": "#F4F7F6",
-  "theme_color": "#E91E63",
+  "background_color": "#0F172A",
+  "theme_color": "#2563EB",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -23,7 +23,7 @@
     }
   ],
   "icon_maskable": false,
-  "categories": ["finance", "business", "productivity"],
+  "categories": ["productivity", "business", "developer"],
   "screenshots": [],
   "shortcuts": [
     {

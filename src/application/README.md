@@ -1,4 +1,4 @@
-# Application Layer - Chef Finance
+# Application Layer - Dev Freelancer
 
 Esta camada contém os casos de uso (use cases) da aplicação, que orquestram as operações de negócio usando as entidades do domínio e os repositórios.
 

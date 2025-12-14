@@ -3,9 +3,9 @@
  * Exporta todos os dados do sistema para um arquivo JSON de backup
  */
 export class ExportData {
-  constructor(eventRepository, transactionRepository, settingsRepository) {
-    this.eventRepository = eventRepository;
-    this.transactionRepository = transactionRepository;
+  constructor(taskRepository, workLogRepository, settingsRepository) {
+    this.taskRepository = taskRepository;
+    this.workLogRepository = workLogRepository;
     this.settingsRepository = settingsRepository;
   }
 
@@ -28,21 +28,21 @@ export class ExportData {
   async execute() {
     try {
       // Busca todos os dados
-      const events = await this.eventRepository.findAll();
-      const transactions = await this.transactionRepository.findAll();
+      const tasks = await this.taskRepository.findAll();
+      const workLogs = await this.workLogRepository.findAll();
       const settings = await this.settingsRepository.find();
 
       // Converte entidades para objetos simples (garante serialização correta)
-      const eventsData = (events || []).map(event => this._entityToPlainObject(event));
-      const transactionsData = (transactions || []).map(transaction => this._entityToPlainObject(transaction));
+      const tasksData = (tasks || []).map(task => this._entityToPlainObject(task));
+      const workLogsData = (workLogs || []).map(workLog => this._entityToPlainObject(workLog));
       const settingsData = settings ? this._entityToPlainObject(settings) : {};
 
       // Estrutura do backup
       const backupData = {
-        version: '1.0',
+        version: '2.0',
         exportDate: new Date().toISOString(),
-        events: eventsData,
-        transactions: transactionsData,
+        tasks: tasksData,
+        workLogs: workLogsData,
         settings: settingsData
       };
 
@@ -52,4 +52,3 @@ export class ExportData {
     }
   }
 }
-

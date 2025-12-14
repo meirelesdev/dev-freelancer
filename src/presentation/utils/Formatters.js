@@ -1,5 +1,5 @@
 /**
- * Utilitários de Formatação - Chef Finance
+ * Utilitários de Formatação - Dev Freelancer
  * Centraliza todas as funções de formatação para evitar duplicação (DRY)
  */
 class Formatters {

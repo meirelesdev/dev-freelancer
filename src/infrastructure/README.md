@@ -1,4 +1,4 @@
-# Infrastructure Layer - Chef Finance
+# Infrastructure Layer - Dev Freelancer
 
 Esta camada contém as implementações concretas dos repositórios usando `localStorage` do navegador.
 

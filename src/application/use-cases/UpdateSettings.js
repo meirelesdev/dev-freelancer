@@ -15,18 +15,8 @@ class UpdateSettings {
   /**
    * Executa o caso de uso
    * @param {Object} input - Dados de entrada
-   * @param {number} [input.rateKm] - Nova taxa por KM
-   * @param {number} [input.defaultReimbursementDays] - Novos dias padrão para reembolso
-   * @param {number} [input.maxHotelRate] - Novo teto de hospedagem
-   * @param {number} [input.standardDailyRate] - Nova diária técnica padrão
-   * @param {number} [input.overtimeRate] - Nova taxa de hora extra
-   * @param {string} [input.contractorName] - Razão Social da CONTRATADA
-   * @param {string} [input.contractorCNPJ] - CNPJ da CONTRATADA
-   * @param {string} [input.contractorAddress] - Endereço da CONTRATADA
-   * @param {string} [input.contractorRepresentative] - Nome do representante da CONTRATADA
-   * @param {string} [input.contractorCPF] - CPF do representante da CONTRATADA
-   * @param {string} [input.contractorPixKey] - Chave PIX da CONTRATADA
-   * @param {string} [input.contractorEmails] - E-mails para envio de NF
+   * @param {number} [input.hourlyRate] - Novo valor por hora
+   * @param {number} [input.minBillableMinutes] - Novo tempo mínimo faturado em minutos
    * @returns {Promise<Object>} - Resultado com configurações atualizadas ou erro
    */
   async execute(input) {
@@ -42,18 +32,8 @@ class UpdateSettings {
 
       // Atualiza apenas os campos informados
       settings.update(
-        input.rateKm,
-        input.defaultReimbursementDays,
-        input.maxHotelRate,
-        input.standardDailyRate,
-        input.overtimeRate,
-        input.contractorName,
-        input.contractorCNPJ,
-        input.contractorAddress,
-        input.contractorRepresentative,
-        input.contractorCPF,
-        input.contractorPixKey,
-        input.contractorEmails
+        input.hourlyRate,
+        input.minBillableMinutes
       );
 
       // Salva as configurações atualizadas
@@ -81,18 +61,7 @@ class UpdateSettings {
     }
 
     // Verifica se pelo menos um campo foi informado
-    if (input.rateKm === undefined && 
-        input.defaultReimbursementDays === undefined &&
-        input.maxHotelRate === undefined &&
-        input.standardDailyRate === undefined &&
-        input.overtimeRate === undefined &&
-        input.contractorName === undefined &&
-        input.contractorCNPJ === undefined &&
-        input.contractorAddress === undefined &&
-        input.contractorRepresentative === undefined &&
-        input.contractorCPF === undefined &&
-        input.contractorPixKey === undefined &&
-        input.contractorEmails === undefined) {
+    if (input.hourlyRate === undefined && input.minBillableMinutes === undefined) {
       throw new Error('Pelo menos um campo deve ser informado para atualização');
     }
 

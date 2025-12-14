@@ -1,4 +1,4 @@
-# Domain Layer - Chef Finance
+# Domain Layer - Dev Freelancer
 
 Esta camada contém as entidades de domínio e interfaces de repositórios, seguindo os princípios de Domain-Driven Design (DDD).
 

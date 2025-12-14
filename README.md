@@ -1,10 +1,10 @@
-# Chef Finance
+# Dev Freelancer
 
-Sistema web (SPA) para gestão financeira de eventos corporativos culinários.
+Sistema web (SPA) para gestão de tarefas e apontamento de horas para desenvolvedores freelancers.
 
 ## 📋 Sobre o Sistema
 
-O **Chef Finance** foi desenvolvido para auxiliar na gestão financeira de eventos culinários, diferenciando claramente entre **reembolsos** (dinheiro gasto que será devolvido) e **lucros** (diárias, horas extras, compensações de viagem).
+O **Dev Freelancer** foi desenvolvido para auxiliar desenvolvedores freelancers no controle de tarefas e faturamento por horas trabalhadas, aplicando regras de negócio como tempo mínimo faturado.
 
 ## 🏗️ Arquitetura
 
@@ -17,36 +17,26 @@ O sistema segue os princípios da **Clean Architecture** com as seguintes camada
 
 ## ✨ Funcionalidades
 
-### Eventos
-- Cadastro, edição e remoção de eventos
-- Listagem de eventos ordenados por data
+### Tarefas
+- Cadastro, edição e remoção de tarefas
+- Status: TODO, DOING, DONE, BILLED
+- Vinculação a projetos/módulos
 
-### Despesas (Reembolsos)
-- Cadastro de despesas vinculadas a eventos
-- Controle de status de Nota Fiscal (emitida/pendente)
-- Marcação rápida de Nota Fiscal como emitida
-- Listagem agrupada por evento
-
-### Receitas (Lucros)
-- Cadastro de receitas com tipos:
-  - **Diária**: Valor fixo por dia
-  - **Hora Extra**: Valor por hora trabalhada
-  - **KM Rodado**: Cálculo automático baseado na distância e taxa configurada
-  - **Tempo de Viagem**: Cálculo automático baseado em horas e taxa configurada
-- Cálculo automático de valores totais
-- Listagem agrupada por evento
+### Apontamento de Tempo
+- Registro de tempo trabalhado (início e fim)
+- Cálculo automático de duração
+- Aplicação de regra de mínimo faturado (30 minutos padrão)
+- Cálculo automático de valor faturado baseado na taxa por hora
 
 ### Configurações
-- Edição de preço por KM rodado
-- Edição de preço por hora de viagem
-- Valores configuráveis que são aplicados automaticamente
+- Valor por hora configurável (padrão: R$ 60,00)
+- Tempo mínimo faturado configurável (padrão: 30 minutos)
+- Backup e restauração de dados
 
 ### Dashboard
-- Resumo financeiro completo
-- Total de reembolsos vs lucros
-- Saldo (lucros - reembolsos)
-- Status das notas fiscais
-- Lista de eventos recentes
+- KPIs: Faturamento do mês, Horas trabalhadas, Tarefas pendentes
+- Lista de tarefas recentes com valor acumulado
+- Visualização rápida do status e progresso
 
 ## 🚀 Como Usar
 
@@ -56,9 +46,9 @@ O sistema segue os princípios da **Clean Architecture** com as seguintes camada
    - Node.js: `npx http-server -p 8000`
    - PHP/XAMPP: Coloque em `htdocs` e acesse via `http://localhost`
 2. Os dados são armazenados localmente no navegador (localStorage)
-3. Navegue pelas seções usando o menu superior (Dashboard, Configurações)
-4. Crie eventos e adicione transações (despesas e receitas)
-5. Configure as taxas de KM e Hora de Viagem nas Configurações
+3. Navegue pelas seções usando o menu inferior (Dashboard, Configurações)
+4. Crie tarefas e registre apontamentos de tempo
+5. Configure o valor por hora e tempo mínimo faturado nas Configurações
 
 ## 📱 Instalação como App (PWA)
 
@@ -76,63 +66,42 @@ A aplicação pode ser instalada no seu dispositivo móvel como um app nativo!
 2. Toque no botão de compartilhar > **"Adicionar à Tela de Início"**
 3. Confirme
 
-**Nota:** Antes de instalar, você precisa criar os ícones. Veja `PWA-SETUP.md` para instruções completas.
+**Nota:** Antes de instalar, você precisa criar os ícones. Veja `COMO-CRIAR-ICONES.md` para instruções completas.
 
 ## 📦 Estrutura de Arquivos
 
-O projeto possui duas estruturas:
-
-### Estrutura Nova (Ativa) - `/src`
 ```
 src/
 ├── domain/              # Entidades e interfaces de repositórios
-│   ├── entities/        # Settings, Event, Transaction
-│   └── repositories/    # Interfaces
+│   ├── entities/       # Task, WorkLog, Settings
+│   ├── repositories/    # Interfaces
+│   └── utils/          # FinancialCalculator
 ├── application/         # Casos de uso
-│   └── use-cases/       # CreateEvent, AddTransaction, etc.
+│   └── use-cases/       # CreateTask, AddWorkLog, etc.
 ├── infrastructure/      # Implementação com localStorage
-│   └── repositories/     # LocalStorageEventRepository, etc.
+│   └── repositories/    # LocalStorageTaskRepository, etc.
 ├── presentation/        # UI e Views
 │   ├── styles/          # CSS modular (variables, base, components)
-│   └── views/           # DashboardView, EventDetailView, SettingsView
+│   ├── views/           # DashboardView, TaskDetailView, SettingsView
+│   └── components/      # Modais e componentes
 └── main.js             # Ponto de entrada principal
-```
-
-### Estrutura Antiga (Referência) - Raiz
-```
-control-gi-mendes/
-├── domain/              # Estrutura antiga
-├── application/         # Estrutura antiga
-├── infrastructure/      # Estrutura antiga
-├── presentation/        # Estrutura antiga
-├── styles/             # CSS antigo
-├── index.html          # HTML principal
-└── app.js              # Inicialização antiga
 ```
 
 ## 🎯 Regras de Negócio
 
-1. **Separação de Caixas**: Reembolsos e lucros são claramente diferenciados
-2. **Configurabilidade**: Taxas de KM e hora de viagem são editáveis
-3. **Cálculos Automáticos**: 
-   - Valor KM = Distância × Taxa Atual
-   - Valor Tempo Viagem = Horas × Taxa Hora
-4. **Controle de Notas**: Cada despesa possui indicador de Nota Fiscal emitida/arquivada
+1. **Faturamento por Hora**: Todo trabalho é cobrado por hora trabalhada
+2. **Regra de Mínimo**: Se uma tarefa durar menos de 30 minutos (configurável), cobra-se o valor de 30 minutos
+   - Exemplo: 10 min trabalhados = Cobrar 0.5h (R$ 30,00 com taxa padrão)
+   - Exemplo: 1h trabalhada = Cobrar 1.0h (R$ 60,00 com taxa padrão)
+3. **Configurabilidade**: Valor por hora e tempo mínimo são editáveis nas configurações
 
 ## 💾 Armazenamento
 
 Todos os dados são armazenados no `localStorage` do navegador, usando as seguintes chaves:
 
-**Nova Arquitetura:**
-- `chef_finance_events` - Eventos
-- `chef_finance_transactions` - Transações (despesas e receitas unificadas)
-- `chef_finance_settings` - Configurações
-
-**Estrutura Antiga (compatibilidade):**
-- `gi_financas_eventos`
-- `gi_financas_despesas`
-- `gi_financas_receitas`
-- `gi_financas_configuracao`
+- `dev_tasks` - Tarefas
+- `dev_worklogs` - Apontamentos de tempo
+- `gi_financas_settings` - Configurações (mantida para compatibilidade)
 
 ## 🌐 Hospedagem no GitHub Pages
 
@@ -142,72 +111,47 @@ O sistema foi projetado para ser hospedado no GitHub Pages, funcionando apenas c
 
 1. **Crie um repositório no GitHub**
    - Vá para [github.com/new](https://github.com/new)
-   - Nome do repositório: `chef-finance` (ou outro nome de sua preferência)
+   - Nome do repositório: `dev-freelancer` (ou outro nome de sua preferência)
    - Escolha se será público ou privado
-   - **NÃO** marque "Initialize this repository with a README" (você já tem um)
 
 2. **Faça upload dos arquivos**
    ```bash
    git init
    git add .
-   git commit -m "Initial commit: Chef Finance"
+   git commit -m "Initial commit: Dev Freelancer"
    git branch -M main
-   git remote add origin https://github.com/SEU-USUARIO/chef-finance.git
+   git remote add origin https://github.com/SEU-USUARIO/dev-freelancer.git
    git push -u origin main
    ```
-   
-   Ou use a interface web do GitHub:
-   - Clique em "uploading an existing file"
-   - Arraste todos os arquivos do projeto
-   - Faça commit
 
 3. **Ative o GitHub Pages**
    - Vá em **Settings** do repositório
    - Role até a seção **Pages**
    - Em **Source**, selecione **Deploy from a branch**
-   - Escolha a branch **main** (ou **master**)
+   - Escolha a branch **main**
    - Escolha a pasta **/ (root)**
    - Clique em **Save**
 
 4. **Acesse seu site**
    - Aguarde alguns minutos para o GitHub processar
    - Seu site estará disponível em:
-     `https://SEU-USUARIO.github.io/chef-finance/`
-
-### ⚠️ Erro de Domínio Personalizado
-
-Se você recebeu o erro:
-> "The custom domain `chef-finance` is not properly formatted"
-
-**Solução**: Você não precisa configurar um domínio personalizado! O GitHub Pages funciona automaticamente sem isso.
-
-**Se você realmente quiser usar um domínio personalizado:**
-- Você precisa ter um domínio registrado (ex: `chef-finance.com`)
-- O formato correto seria `chef-finance.com` ou `www.chef-finance.com` (não apenas `chef-finance`)
-- Configure o DNS do seu domínio apontando para o GitHub Pages
-- Adicione o domínio completo nas configurações do GitHub Pages
-
-**Recomendação**: Para começar, use apenas o GitHub Pages sem domínio personalizado. É mais simples e funciona perfeitamente!
+     `https://SEU-USUARIO.github.io/dev-freelancer/`
 
 ## 📚 Documentação Completa
 
 Para uma visão detalhada do projeto, consulte:
 
-- **[PROJETO.md](./PROJETO.md)** - Documentação completa com status de todos os arquivos
-- **[ESTRUTURA.md](./ESTRUTURA.md)** - Estrutura visual em árvore do projeto
 - **[DEPLOY.md](./DEPLOY.md)** - Guia completo de deploy no GitHub Pages
+- **[COMO-CRIAR-ICONES.md](./COMO-CRIAR-ICONES.md)** - Instruções para criar ícones do PWA
 
 ## 📊 Status do Projeto
 
-O projeto está **funcional** com a nova arquitetura mais robusta:
+O projeto está em **migração** para o novo domínio de Gestão de Tarefas de Desenvolvimento:
 
-- ✅ **Domain Layer** - 100% completo (nova arquitetura)
-- ✅ **Application Layer** - 100% completo (funcionalidades principais)
-- ✅ **Infrastructure Layer** - 100% completo (nova arquitetura)
-- ✅ **Presentation Layer** - 100% completo (nova arquitetura)
-
-**Estrutura nova**: Sistema operacional e pronto para uso
-**Estrutura antiga**: 100% funcional e completa (mantida para referência)
+- ✅ **Domain Layer** - Migrado (Task, WorkLog, Settings)
+- 🔄 **Application Layer** - Em migração (use cases sendo atualizados)
+- ✅ **Infrastructure Layer** - Migrado (repositórios atualizados)
+- 🔄 **Presentation Layer** - Em migração (views sendo atualizadas)
 
 ## 📝 Licença
 

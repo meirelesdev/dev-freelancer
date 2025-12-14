@@ -1,11 +1,10 @@
 /**
- * Aplicação Principal - Chef Finance
+ * Aplicação Principal - Dev Freelancer
  * Gerencia navegação e inicialização das views
  */
 import { DashboardView } from './views/DashboardView.js';
-import { EventDetailView } from './views/EventDetailView.js';
+import { TaskDetailView } from './views/TaskDetailView.js';
 import { SettingsView } from './views/SettingsView.js';
-import { MonthlyReportView } from './views/MonthlyReportView.js';
 
 class App {
   constructor(dependencies) {
@@ -24,7 +23,7 @@ class App {
     this.setupNavigation();
     this.setupEventListeners();
     // Garante que o FAB está visível inicialmente (dashboard)
-    const fab = document.getElementById('fab-new-event');
+    const fab = document.getElementById('fab-new-task') || document.getElementById('fab-new-event');
     if (fab) {
       fab.classList.remove('hidden');
     }
@@ -42,34 +41,38 @@ class App {
       });
     });
 
-    // Event listener para FAB (Novo Evento)
-    const fabNewEvent = document.getElementById('fab-new-event');
-    if (fabNewEvent) {
-      fabNewEvent.addEventListener('click', () => {
-        // Dispara evento customizado para criar novo evento
+    // Event listener para FAB (Nova Tarefa)
+    const fabNewTask = document.getElementById('fab-new-task') || document.getElementById('fab-new-event');
+    if (fabNewTask) {
+      fabNewTask.addEventListener('click', () => {
+        // Dispara evento customizado para criar nova tarefa
+        window.dispatchEvent(new CustomEvent('create-new-task'));
+        // Compatibilidade: também dispara evento antigo
         window.dispatchEvent(new CustomEvent('create-new-event'));
       });
     }
 
-    // Event listener para navegação customizada (ex: ir para detalhe do evento ou voltar ao dashboard)
+    // Event listener para navegação customizada (ex: ir para detalhe da tarefa ou voltar ao dashboard)
     window.addEventListener('navigate', (e) => {
-      const { view, eventId } = e.detail;
-      if (view === 'event-detail' && eventId) {
-        this.currentEventId = eventId;
-        this.navigateTo('event-detail');
+      const { view, taskId, eventId } = e.detail;
+      if (view === 'task-detail' && taskId) {
+        this.currentTaskId = taskId;
+        this.navigateTo('task-detail');
+      } else if (view === 'event-detail' && eventId) {
+        // Compatibilidade com código antigo
+        this.currentTaskId = eventId;
+        this.navigateTo('task-detail');
       } else if (view === 'dashboard') {
-        this.currentEventId = null; // Limpa o ID do evento ao voltar ao dashboard
+        this.currentTaskId = null; // Limpa o ID da tarefa ao voltar ao dashboard
         this.navigateTo('dashboard');
-      } else if (view === 'monthly-report') {
-        this.navigateTo('monthly-report');
       }
     });
   }
 
   setupEventListeners() {
-    // Botão voltar do detalhe do evento
+    // Botão voltar do detalhe da tarefa
     window.addEventListener('popstate', () => {
-      if (this.currentView === 'event-detail') {
+      if (this.currentView === 'task-detail' || this.currentView === 'event-detail') {
         this.navigateTo('dashboard');
       }
     });
@@ -89,10 +92,10 @@ class App {
       content.classList.remove('active');
     });
 
-    // Controla visibilidade do FAB (só aparece no dashboard e monthly-report)
-    const fab = document.getElementById('fab-new-event');
+    // Controla visibilidade do FAB (só aparece no dashboard)
+    const fab = document.getElementById('fab-new-task') || document.getElementById('fab-new-event');
     if (fab) {
-      if (view === 'dashboard' || view === 'monthly-report') {
+      if (view === 'dashboard') {
         fab.classList.remove('hidden');
       } else {
         fab.classList.add('hidden');
@@ -106,71 +109,62 @@ class App {
 
   async render() {
     const { 
-      eventRepository, 
-      transactionRepository, 
+      taskRepository, 
+      workLogRepository, 
       settingsRepository,
-      addTransaction,
-      deleteTransaction,
+      createTask,
+      getTaskSummary,
+      addWorkLog,
+      updateTask,
+      deleteTask,
+      updateWorkLog,
+      deleteWorkLog,
       updateSettings,
-      generateEventReport,
-      generateMonthlyReport,
-      updateEventStatus,
-      updateEvent,
-      updateTransaction,
-      deleteEvent
+      exportData,
+      importData
     } = this.dependencies;
 
     if (this.currentView === 'dashboard') {
       const dashboardView = new DashboardView(
-        eventRepository,
-        transactionRepository,
+        taskRepository,
+        workLogRepository,
         settingsRepository,
-        this.dependencies.createEvent,
-        generateMonthlyReport,
-        this.dependencies.getEventSummary
+        createTask
       );
       const content = document.getElementById('dashboard-content');
       if (content) {
         content.classList.add('active');
         await dashboardView.render();
       }
-    } else if (this.currentView === 'monthly-report') {
-      const monthlyReportView = new MonthlyReportView(generateMonthlyReport, settingsRepository);
-      const content = document.getElementById('monthly-report-content');
-      if (content) {
-        content.classList.add('active');
-        await monthlyReportView.render();
-      }
-    } else if (this.currentView === 'event-detail') {
-      const eventDetailView = new EventDetailView(
-        eventRepository,
-        transactionRepository,
+    } else if (this.currentView === 'task-detail' || this.currentView === 'event-detail') {
+      const taskDetailView = new TaskDetailView(
+        taskRepository,
+        workLogRepository,
         settingsRepository,
-        addTransaction,
-        deleteTransaction,
-        generateEventReport,
-        updateEventStatus,
-        updateEvent,
-        updateTransaction,
-        deleteEvent,
-        this.dependencies.getEventSummary
+        getTaskSummary,
+        addWorkLog,
+        updateTask,
+        deleteTask,
+        updateWorkLog,
+        deleteWorkLog
       );
-      const content = document.getElementById('event-detail-content');
+      const content = document.getElementById('event-detail-content') || document.getElementById('task-detail-content');
       if (content) {
         content.classList.add('active');
-        if (this.currentEventId) {
-          await eventDetailView.render(this.currentEventId);
+        const taskId = this.currentTaskId;
+        if (taskId) {
+          await taskDetailView.render(taskId);
         }
       }
     } else if (this.currentView === 'settings') {
       const settingsView = new SettingsView(
         settingsRepository,
         updateSettings,
-        this.dependencies.exportData,
-        this.dependencies.importData,
-        this.dependencies.exportTransactionsToCSV,
-        this.dependencies.eventRepository,
-        this.dependencies.transactionRepository
+        exportData,
+        importData,
+        null, // exportTransactionsToCSV - não mais necessário
+        taskRepository,
+        workLogRepository
       );
       const content = document.getElementById('settings-content');
       if (content) {
