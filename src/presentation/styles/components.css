@@ -7,12 +7,12 @@
 .app-container {
   max-width: 100%;
   margin: 0 auto;
-  min-height: 100vh;
-  min-height: -webkit-fill-available; /* Para iOS Safari */
+  height: 100vh;
+  height: 100dvh; /* Para mobile com barra de endereço dinâmica */
   display: flex;
   flex-direction: column;
   padding-bottom: 0;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 /* Header Superior - Minimalista e Fixo */
@@ -151,10 +151,8 @@
 .tab-content {
   display: none;
   flex: 1;
-  overflow-y: auto;
   padding: var(--spacing-lg);
   padding-bottom: calc(var(--spacing-xl) + 100px); /* Espaço para bottom nav + FAB */
-  -webkit-overflow-scrolling: touch;
 }
 
 .tab-content.active {

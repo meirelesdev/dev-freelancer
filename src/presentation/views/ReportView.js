@@ -652,7 +652,22 @@ class ReportView {
 
         .total-row {
             font-weight: bold;
-            background-color: #f5f5f5;
+            background-color: #e0e0e0;
+        }
+
+        .task-header {
+            background-color: #444;
+            color: white;
+        }
+
+        .task-header td {
+            padding: 6px 5px;
+            border-color: #333;
+        }
+
+        .subtotal-row {
+            background-color: #f0f0f0;
+            font-size: 8.5pt;
         }
 
         .summary {
@@ -773,41 +788,74 @@ class ReportView {
         </div>
     </div>
 
-    ${data.entries && data.entries.length > 0 ? `
+    ${data.entries && data.entries.length > 0 ? (() => {
+      // Agrupa entries por tarefa
+      const groupedByTask = new Map();
+      for (const entry of data.entries) {
+        if (!groupedByTask.has(entry.taskId)) {
+          groupedByTask.set(entry.taskId, {
+            taskTitle: entry.taskTitle,
+            project: entry.project,
+            entries: [],
+            totalDuration: 0,
+            totalBillableHours: 0,
+            totalBillableAmount: 0
+          });
+        }
+        const group = groupedByTask.get(entry.taskId);
+        group.entries.push(entry);
+        group.totalDuration += entry.durationMinutes;
+        group.totalBillableHours += entry.billableHours;
+        group.totalBillableAmount += entry.billableAmount;
+      }
+
+      const taskCount = groupedByTask.size;
+      let tableRows = '';
+      for (const [, group] of groupedByTask) {
+        tableRows += `
+                <tr class="task-header">
+                    <td colspan="4"><strong>${this._escapeHtml(group.taskTitle)}</strong> — ${this._escapeHtml(group.project)}</td>
+                </tr>`;
+        for (const entry of group.entries) {
+          tableRows += `
+                <tr>
+                    <td>${formatDate(entry.date)}</td>
+                    <td>${this._escapeHtml(entry.description) || '-'}</td>
+                    <td>${formatHours(entry.billableHours)}</td>
+                    <td>${formatCurrency(entry.billableAmount)}</td>
+                </tr>`;
+        }
+        tableRows += `
+                <tr class="subtotal-row">
+                    <td colspan="2"><strong>Subtotal</strong></td>
+                    <td><strong>${formatHours(group.totalBillableHours)}</strong></td>
+                    <td><strong>${formatCurrency(group.totalBillableAmount)}</strong></td>
+                </tr>`;
+      }
+
+      return `
     <div class="section">
         <div class="section-title">Apontamentos de Tempo</div>
         <table>
             <thead>
                 <tr>
                     <th style="width: 12%;">Data</th>
-                    <th style="width: 35%;">Tarefa</th>
-                    <th style="width: 20%;">Módulo</th>
-                    <th style="width: 15%;">Duração Real</th>
-                    <th style="width: 15%;">Duração Faturada</th>
-                    <th style="width: 13%;">Valor</th>
+                    <th style="width: 48%;">Descrição</th>
+                    <th style="width: 15%;">Duração</th>
+                    <th style="width: 25%;">Valor</th>
                 </tr>
             </thead>
             <tbody>
-                ${data.entries.map(entry => `
-                <tr>
-                    <td>${formatDate(entry.date)}</td>
-                    <td>${this._escapeHtml(entry.taskTitle)}</td>
-                    <td>${this._escapeHtml(entry.project)}</td>
-                    <td>${formatTime(entry.durationMinutes)}</td>
-                    <td>${formatHours(entry.billableHours)}</td>
-                    <td>${formatCurrency(entry.billableAmount)}</td>
-                </tr>
-                `).join('')}
+                ${tableRows}
                 <tr class="total-row">
-                    <td colspan="3"><strong>TOTAL</strong></td>
-                    <td><strong>${formatTime(data.totals.totalDurationMinutes)}</strong></td>
+                    <td colspan="2"><strong>TOTAL GERAL (${taskCount} tarefa${taskCount > 1 ? 's' : ''})</strong></td>
                     <td><strong>${formatHours(data.totals.totalBillableHours)}</strong></td>
                     <td><strong>${formatCurrency(data.totals.totalBillableAmount)}</strong></td>
                 </tr>
             </tbody>
         </table>
-    </div>
-    ` : `
+    </div>`;
+    })() : `
     <div class="section">
         <p style="text-align: center; padding: 20px; color: #666; font-style: italic;">
             Nenhum apontamento de tempo encontrado para este período.
@@ -818,15 +866,11 @@ class ReportView {
     <div class="summary">
         <div class="summary-title">Resumo</div>
         <div class="summary-row">
-            <span>Total de Apontamentos:</span>
-            <span><strong>${data.totals.entriesCount || 0}</strong></span>
+            <span>Total de Tarefas:</span>
+            <span><strong>${(() => { const s = new Set(data.entries.map(e => e.taskId)); return s.size; })()}</strong></span>
         </div>
         <div class="summary-row">
-            <span>Tempo Total Trabalhado:</span>
-            <span><strong>${formatTime(data.totals.totalDurationMinutes)}</strong></span>
-        </div>
-        <div class="summary-row">
-            <span>Tempo Total Faturado:</span>
+            <span>Total de Horas Trabalhadas:</span>
             <span><strong>${formatHours(data.totals.totalBillableHours)}</strong></span>
         </div>
         <div class="summary-row">

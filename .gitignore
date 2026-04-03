@@ -5,6 +5,7 @@ desktop.ini
 
 # IDEs
 .vscode/
+.claude/settings.local.json
 .idea/
 *.swp
 *.swo
